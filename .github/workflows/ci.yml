@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: guardian/setup-scala@v1
+      - run: >
+          sbt
+          compile 
+          Test/compile 
+          scalafmtCheckAll 
+          scalafmtSbtCheck 
+          test
