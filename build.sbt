@@ -8,6 +8,6 @@ lazy val root = project
     libraryDependencies ++= Seq(
       "org.playframework" %% "play" % "3.0.8",
       "com.webauthn4j" % "webauthn4j-core" % "0.29.4.RELEASE",
-      "org.scalameta" %% "munit" % "1.0.4" % Test
+      "org.scalameta" %% "munit" % "1.1.1" % Test
     )
   )
