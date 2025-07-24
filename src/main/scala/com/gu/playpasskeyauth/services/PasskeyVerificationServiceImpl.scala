@@ -6,8 +6,12 @@ import com.webauthn4j.data.*
 import com.webauthn4j.data.PublicKeyCredentialHints.{CLIENT_DEVICE, HYBRID, SECURITY_KEY}
 import com.webauthn4j.data.PublicKeyCredentialType.PUBLIC_KEY
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
-import com.webauthn4j.data.client.challenge.DefaultChallenge
-import com.webauthn4j.data.extension.client.{AuthenticationExtensionsClientInputs, RegistrationExtensionClientInput}
+import com.webauthn4j.data.client.challenge.{Challenge, DefaultChallenge}
+import com.webauthn4j.data.extension.client.{
+  AuthenticationExtensionClientInput,
+  AuthenticationExtensionsClientInputs,
+  RegistrationExtensionClientInput
+}
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.util.Base64UrlUtil
 
@@ -21,11 +25,14 @@ import scala.util.Try
 class PasskeyVerificationServiceImpl(
     app: HostApp,
     passkeyRepo: PasskeyRepository,
-    challengeRepo: PasskeyChallengeRepository
+    challengeRepo: PasskeyChallengeRepository,
+    generateChallenge: () => Challenge = () => new DefaultChallenge()
 ) extends PasskeyVerificationService {
 
   private val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
+
   private val userVerificationRequired = true
+  private val userVerification = UserVerificationRequirement.REQUIRED
 
   private val relyingParty = new PublicKeyCredentialRpEntity(app.host, app.name)
 
@@ -64,7 +71,8 @@ class PasskeyVerificationServiceImpl(
 
   private val attestation = AttestationConveyancePreference.DIRECT
 
-  private val extensions: AuthenticationExtensionsClientInputs[RegistrationExtensionClientInput] = null
+  private val creationExtensions: AuthenticationExtensionsClientInputs[RegistrationExtensionClientInput] = null
+  private val authExtensions: AuthenticationExtensionsClientInputs[AuthenticationExtensionClientInput] = null
 
   private val credType = PUBLIC_KEY
 
@@ -72,10 +80,10 @@ class PasskeyVerificationServiceImpl(
 
   def creationOptions(userId: String): Future[PublicKeyCredentialCreationOptions] = {
     val userInfo = new PublicKeyCredentialUserEntity(userId.getBytes(UTF_8), userId, userId)
-    val challenge = new DefaultChallenge()
+    val challenge = generateChallenge()
     passkeyRepo
       .loadPasskeyIds(userId)
-      .map(passkeyIds =>
+      .map { passkeyIds =>
         val excludeCredentials = passkeyIds.map(toDescriptor)
         new PublicKeyCredentialCreationOptions(
           relyingParty,
@@ -87,9 +95,26 @@ class PasskeyVerificationServiceImpl(
           authenticatorSelection,
           hints.asJava,
           attestation,
-          extensions
+          creationExtensions
         )
+      }
+  }
+
+  def authenticationOptions(userId: String): Future[PublicKeyCredentialRequestOptions] = {
+    val challenge = generateChallenge()
+    val rpId = app.host
+    passkeyRepo.loadPasskeyIds(userId).map { passkeyIds =>
+      val allowCredentials = passkeyIds.map(toDescriptor)
+      new PublicKeyCredentialRequestOptions(
+        challenge,
+        timeout.toMillis,
+        rpId,
+        allowCredentials.asJava,
+        userVerification,
+        hints.asJava,
+        authExtensions
       )
+    }
   }
 
   def verify(userId: String, authData: AuthenticationData): Future[AuthenticationData] =

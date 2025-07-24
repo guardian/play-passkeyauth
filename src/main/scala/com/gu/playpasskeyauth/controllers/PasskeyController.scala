@@ -27,8 +27,19 @@ class PasskeyController[R[_]](
     apiResponse(for {
       userId <- reqHelper
         .findUserId(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Request missing user ID")))
+        .toFutureOr(Future.failed(new IllegalArgumentException("Creation options request missing user ID")))
       options <- passkeyService.creationOptions(userId)
+    } yield options)
+  }
+
+  /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-assertion]].
+    */
+  def authenticationOptions: Action[Unit] = customAction.async(parse.empty) { request =>
+    apiResponse(for {
+      userId <- reqHelper
+        .findUserId(request)
+        .toFutureOr(Future.failed(new IllegalArgumentException("Auth options request missing user ID")))
+      options <- passkeyService.authenticationOptions(userId)
     } yield options)
   }
 
