@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Suppress all logging during tests -->
+    <root level="OFF">
+        <!-- No appenders configured - all logging is disabled -->
+    </root>
+</configuration>
