@@ -18,7 +18,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
-class Webauthn4jPasskeyVerificationService(
+class PasskeyVerificationServiceImpl(
     app: HostApp,
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository
