@@ -1,24 +1,96 @@
 package com.gu.playpasskeyauth.services
 
+import com.gu.playpasskeyauth.model.HostApp
 import com.webauthn4j.WebAuthnManager
-import com.webauthn4j.data.{AuthenticationData, AuthenticationParameters}
-import com.webauthn4j.data.client.Origin
+import com.webauthn4j.data.*
+import com.webauthn4j.data.PublicKeyCredentialHints.{CLIENT_DEVICE, HYBRID, SECURITY_KEY}
+import com.webauthn4j.data.PublicKeyCredentialType.PUBLIC_KEY
+import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
+import com.webauthn4j.data.client.challenge.DefaultChallenge
+import com.webauthn4j.data.extension.client.{AuthenticationExtensionsClientInputs, RegistrationExtensionClientInput}
 import com.webauthn4j.server.ServerProperty
+import com.webauthn4j.util.Base64UrlUtil
 
-import java.net.URI
+import java.nio.charset.StandardCharsets.UTF_8
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.{Duration, SECONDS}
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
 class Webauthn4jPasskeyVerificationService(
-    appHost: String,
+    app: HostApp,
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository
-) extends PasskeyVerificationService:
+) extends PasskeyVerificationService {
 
   private val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
   private val userVerificationRequired = true
+
+  private val relyingParty = new PublicKeyCredentialRpEntity(app.host, app.name)
+
+  // In order of algorithms we prefer
+  private val publicKeyCredentialParameters = List(
+    // EdDSA for better security/performance in newer authenticators
+    new PublicKeyCredentialParameters(
+      PUBLIC_KEY,
+      COSEAlgorithmIdentifier.EdDSA
+    ),
+    // ES256 is widely supported and efficient
+    new PublicKeyCredentialParameters(
+      PUBLIC_KEY,
+      COSEAlgorithmIdentifier.ES256
+    ),
+    // RS256 for broader compatibility
+    new PublicKeyCredentialParameters(
+      PUBLIC_KEY,
+      COSEAlgorithmIdentifier.RS256
+    )
+  )
+
+  private val timeout = Duration(60, SECONDS)
+
+  private val authenticatorSelection = {
+    // Allow the widest possible range of authenticators
+    val authenticatorAttachment: AuthenticatorAttachment = null
+    new AuthenticatorSelectionCriteria(
+      authenticatorAttachment,
+      ResidentKeyRequirement.DISCOURAGED, // Don't allow passkeys unknown to the server to be discovered at authentication time
+      UserVerificationRequirement.REQUIRED
+    )
+  }
+
+  private val hints = Seq(CLIENT_DEVICE, SECURITY_KEY, HYBRID)
+
+  private val attestation = AttestationConveyancePreference.DIRECT
+
+  private val extensions: AuthenticationExtensionsClientInputs[RegistrationExtensionClientInput] = null
+
+  private val credType = PUBLIC_KEY
+
+  private val transports: Option[Set[AuthenticatorTransport]] = None
+
+  def creationOptions(userId: String): Future[PublicKeyCredentialCreationOptions] = {
+    val userInfo = new PublicKeyCredentialUserEntity(userId.getBytes(UTF_8), userId, userId)
+    val challenge = new DefaultChallenge()
+    passkeyRepo
+      .loadPasskeyIds(userId)
+      .map(passkeyIds =>
+        val excludeCredentials = passkeyIds.map(toDescriptor)
+        new PublicKeyCredentialCreationOptions(
+          relyingParty,
+          userInfo,
+          challenge,
+          publicKeyCredentialParameters.asJava,
+          timeout.toMillis,
+          excludeCredentials.asJava,
+          authenticatorSelection,
+          hints.asJava,
+          attestation,
+          extensions
+        )
+      )
+  }
 
   def verify(userId: String, authData: AuthenticationData): Future[AuthenticationData] =
     for {
@@ -26,11 +98,11 @@ class Webauthn4jPasskeyVerificationService(
       challenge <- optChallenge
         .map(c => Future.successful(c))
         .getOrElse(Future.failed(new RuntimeException("Challenge not found")))
-      optPasskey <- passkeyRepo.loadPasskey(userId, authData.getCredentialId)
+      optPasskey <- passkeyRepo.loadCredentialRecord(userId, authData.getCredentialId)
       passkey <- optPasskey
         .map(p => Future.successful(p))
         .getOrElse(Future.failed(new RuntimeException("Passkey not found")))
-      serverProps = new ServerProperty(Origin.create(appHost), URI.create(appHost).getHost, challenge)
+      serverProps = new ServerProperty(app.origin, app.host, challenge)
       authParams = new AuthenticationParameters(
         serverProps,
         passkey,
@@ -42,3 +114,13 @@ class Webauthn4jPasskeyVerificationService(
       _ <- passkeyRepo.updateAuthenticationCounter(userId, verifiedAuthData)
       _ <- passkeyRepo.updateLastUsedTime(userId, verifiedAuthData)
     } yield verifiedAuthData
+
+  private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor = {
+    val id = Base64UrlUtil.decode(passkeyId)
+    new PublicKeyCredentialDescriptor(
+      credType,
+      id,
+      transports.map(_.asJava).orNull
+    )
+  }
+}

@@ -6,8 +6,9 @@ import com.webauthn4j.data.client.challenge.Challenge
 
 import scala.concurrent.Future
 
-trait PasskeyChallengeRepository:
+trait PasskeyChallengeRepository {
 
   def loadAuthenticationChallenge(userId: String): Future[Option[Challenge]]
 
   def deleteAuthenticationChallenge(userId: String): Future[Unit]
+}
