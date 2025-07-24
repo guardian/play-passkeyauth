@@ -3,7 +3,7 @@ lazy val root = project
   .settings(
     name := "play-passkeyauth",
     version := "0.1.0-SNAPSHOT",
-    scalaVersion := "3.7.1",
+    scalaVersion := "3.3.6",
     scalafmtOnCompile := true,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play" % "3.0.8",
