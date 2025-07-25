@@ -110,9 +110,12 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
   "authenticationOptions" must {
     "return authentication options with correct challenge" in {
       val passkeyRepo = mock[PasskeyRepository]
+      val challengeRepo = mock[PasskeyChallengeRepository]
       when(passkeyRepo.loadPasskeyIds(testUserId)).thenReturn(Future.successful(List.empty))
+      when(challengeRepo.insertAuthenticationChallenge(eqTo(testUserId), any[Challenge]))
+        .thenReturn(Future.successful(()))
 
-      val service = createService(passkeyRepo)
+      val service = createService(passkeyRepo, challengeRepo)
       val result = service.authenticationOptions(testUserId).futureValue
 
       result.getChallenge mustBe testChallenge
@@ -120,9 +123,12 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
 
     "return authentication options with correct RP ID" in {
       val passkeyRepo = mock[PasskeyRepository]
+      val challengeRepo = mock[PasskeyChallengeRepository]
       when(passkeyRepo.loadPasskeyIds(testUserId)).thenReturn(Future.successful(List.empty))
+      when(challengeRepo.insertAuthenticationChallenge(eqTo(testUserId), any[Challenge]))
+        .thenReturn(Future.successful(()))
 
-      val service = createService(passkeyRepo)
+      val service = createService(passkeyRepo, challengeRepo)
       val result = service.authenticationOptions(testUserId).futureValue
 
       result.getRpId mustBe testApp.host
@@ -130,9 +136,12 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
 
     "include allowed credentials from repository" in {
       val passkeyRepo = mock[PasskeyRepository]
+      val challengeRepo = mock[PasskeyChallengeRepository]
       when(passkeyRepo.loadPasskeyIds(testUserId)).thenReturn(Future.successful(List(testPasskeyId)))
+      when(challengeRepo.insertAuthenticationChallenge(eqTo(testUserId), any[Challenge]))
+        .thenReturn(Future.successful(()))
 
-      val service = createService(passkeyRepo)
+      val service = createService(passkeyRepo, challengeRepo)
       val result = service.authenticationOptions(testUserId).futureValue
 
       result.getAllowCredentials.size() mustBe 1
@@ -140,12 +149,28 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
 
     "return authentication options with required user verification" in {
       val passkeyRepo = mock[PasskeyRepository]
+      val challengeRepo = mock[PasskeyChallengeRepository]
       when(passkeyRepo.loadPasskeyIds(testUserId)).thenReturn(Future.successful(List.empty))
+      when(challengeRepo.insertAuthenticationChallenge(eqTo(testUserId), any[Challenge]))
+        .thenReturn(Future.successful(()))
 
-      val service = createService(passkeyRepo)
+      val service = createService(passkeyRepo, challengeRepo)
       val result = service.authenticationOptions(testUserId).futureValue
 
       result.getUserVerification mustBe UserVerificationRequirement.REQUIRED
+    }
+
+    "insert authentication challenge in repository" in {
+      val passkeyRepo = mock[PasskeyRepository]
+      val challengeRepo = mock[PasskeyChallengeRepository]
+      when(passkeyRepo.loadPasskeyIds(testUserId)).thenReturn(Future.successful(List.empty))
+      when(challengeRepo.insertAuthenticationChallenge(eqTo(testUserId), any[Challenge]))
+        .thenReturn(Future.successful(()))
+
+      val service = createService(passkeyRepo, challengeRepo)
+      service.authenticationOptions(testUserId).futureValue
+
+      verify(challengeRepo).insertAuthenticationChallenge(eqTo(testUserId), eqTo(testChallenge))
     }
   }
 

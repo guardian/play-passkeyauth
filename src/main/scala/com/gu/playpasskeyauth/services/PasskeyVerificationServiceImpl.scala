@@ -1,6 +1,7 @@
 package com.gu.playpasskeyauth.services
 
 import com.gu.playpasskeyauth.models.HostApp
+import com.gu.playpasskeyauth.utilities.Utilities.*
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
@@ -125,11 +126,13 @@ class PasskeyVerificationServiceImpl(
     )
   }
 
-  // TODO: challenge in DB
-  def authenticationOptions(userId: String): Future[PublicKeyCredentialRequestOptions] = {
-    val challenge = generateChallenge()
-    val rpId = app.host
-    passkeyRepo.loadPasskeyIds(userId).map { passkeyIds =>
+  def authenticationOptions(userId: String): Future[PublicKeyCredentialRequestOptions] =
+    for {
+      passkeyIds <- passkeyRepo.loadPasskeyIds(userId)
+      challenge = generateChallenge()
+      _ <- challengeRepo.insertAuthenticationChallenge(userId, challenge)
+    } yield {
+      val rpId = app.host
       val allowCredentials = passkeyIds.map(toDescriptor)
       new PublicKeyCredentialRequestOptions(
         challenge,
@@ -141,18 +144,13 @@ class PasskeyVerificationServiceImpl(
         authExtensions
       )
     }
-  }
 
   def verify(userId: String, authData: AuthenticationData): Future[AuthenticationData] =
     for {
       optChallenge <- challengeRepo.loadAuthenticationChallenge(userId)
-      challenge <- optChallenge
-        .map(c => Future.successful(c))
-        .getOrElse(Future.failed(new RuntimeException("Challenge not found")))
+      challenge <- optChallenge.toFutureOr(Future.failed(new RuntimeException("Challenge not found")))
       optPasskey <- passkeyRepo.loadCredentialRecord(userId, authData.getCredentialId)
-      passkey <- optPasskey
-        .map(p => Future.successful(p))
-        .getOrElse(Future.failed(new RuntimeException("Passkey not found")))
+      passkey <- optPasskey.toFutureOr(Future.failed(new RuntimeException("Passkey not found")))
       serverProps = new ServerProperty(app.origin, app.host, challenge)
       authParams = new AuthenticationParameters(
         serverProps,
