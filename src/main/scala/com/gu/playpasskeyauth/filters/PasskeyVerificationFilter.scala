@@ -4,11 +4,11 @@ import com.gu.playpasskeyauth.services.PasskeyVerificationService
 import com.gu.playpasskeyauth.web.RequestHelper
 import com.webauthn4j.data.AuthenticationData
 import play.api.Logging
-import play.api.mvc.Results.InternalServerError
+import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.mvc.{ActionFilter, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
-import com.gu.playpasskeyauth.utilities.Utilities._
+import com.gu.playpasskeyauth.utilities.Utilities.*
 
 /** Verifies passkey presented in request and only allows an action to continue if verification is successful.
   *
@@ -21,15 +21,15 @@ class PasskeyVerificationFilter[R[_]](verifier: PasskeyVerificationService)(usin
     with Logging {
 
   def filter[A](request: R[A]): Future[Option[Result]] =
-    for {
+    apiResponse(for {
       userId <- reqHelper
         .findUserId(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Request missing user ID")))
       authData <- reqHelper
         .findAuthenticationData(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Request missing authentication data")))
-      response <- apiResponse(verifier.verify(userId, authData))
-    } yield response
+      response <- verifier.verify(userId, authData)
+    } yield response)
 
   private def apiResponse(auth: => Future[AuthenticationData]): Future[Option[Result]] =
     auth
@@ -37,8 +37,12 @@ class PasskeyVerificationFilter[R[_]](verifier: PasskeyVerificationService)(usin
         logger.info("Verified authentication data")
         None
       }
-      .recover { e =>
-        logger.error(e.getMessage, e)
-        Some(InternalServerError("Something went wrong"))
+      .recover {
+        case e: IllegalArgumentException =>
+          logger.error(e.getMessage, e)
+          Some(BadRequest("Something went wrong"))
+        case e =>
+          logger.error(e.getMessage, e)
+          Some(InternalServerError("Something went wrong"))
       }
 }
