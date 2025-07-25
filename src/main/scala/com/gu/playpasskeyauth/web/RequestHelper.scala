@@ -5,5 +5,7 @@ import com.webauthn4j.data.AuthenticationData
 trait RequestHelper[R[_]] {
   def findUserId[A](request: R[A]): Option[String]
 
+  def findCreationData[A](request: R[A]): Option[String]
+
   def findAuthenticationData[A](request: R[A]): Option[AuthenticationData]
 }

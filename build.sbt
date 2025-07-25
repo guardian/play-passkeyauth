@@ -6,7 +6,7 @@ lazy val root = project
     name := "play-passkeyauth",
     version := "0.1.0-SNAPSHOT",
     scalaVersion := "3.3.6",
-    scalacOptions ++= Seq("-deprecation", "-Werror"),
+    scalacOptions ++= Seq("-deprecation", "-explain", "-Werror"),
     scalafmtOnCompile := true,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play" % playVersion,

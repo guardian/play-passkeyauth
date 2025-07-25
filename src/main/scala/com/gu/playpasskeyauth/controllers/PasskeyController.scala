@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.controllers
 
-import com.gu.playpasskeyauth.model.JsonEncodings.given
+import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
 import com.gu.playpasskeyauth.utilities.Utilities.*
 import com.gu.playpasskeyauth.web.RequestHelper
@@ -32,6 +32,20 @@ class PasskeyController[R[_]](
     } yield options)
   }
 
+  /** See [[https://webauthn4j.github.io/webauthn4j/en/#registering-the-webauthn-public-key-credential-on-the-server]].
+    */
+  def register: Action[AnyContent] = customAction.async { request =>
+    apiResponse(for {
+      userId <- reqHelper
+        .findUserId(request)
+        .toFutureOr(Future.failed(new IllegalArgumentException("Register request missing user ID")))
+      jsonCreationResponse <- reqHelper
+        .findCreationData(request)
+        .toFutureOr(Future.failed(new IllegalArgumentException("Register request missing creation data")))
+      _ <- passkeyService.register(userId, jsonCreationResponse)
+    } yield ())
+  }
+
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-assertion]].
     */
   def authenticationOptions: Action[Unit] = customAction.async(parse.empty) { request =>
@@ -45,9 +59,13 @@ class PasskeyController[R[_]](
 
   private def apiResponse[A](fa: => Future[A])(using writer: Writes[A]): Future[Result] =
     fa
-      .map { a =>
-        logger.info("Success")
-        Ok(writer.writes(a))
+      .map {
+        case () =>
+          logger.info("Success")
+          NoContent
+        case a =>
+          logger.info("Success")
+          Ok(writer.writes(a))
       }
       .recover {
         case e: IllegalArgumentException =>

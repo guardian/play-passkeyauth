@@ -1,7 +1,8 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.model.HostApp
+import com.gu.playpasskeyauth.models.HostApp
 import com.webauthn4j.WebAuthnManager
+import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
 import com.webauthn4j.data.PublicKeyCredentialHints.{CLIENT_DEVICE, HYBRID, SECURITY_KEY}
 import com.webauthn4j.data.PublicKeyCredentialType.PUBLIC_KEY
@@ -23,7 +24,7 @@ import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
 class PasskeyVerificationServiceImpl(
-    app: HostApp,
+    app: com.gu.playpasskeyauth.models.HostApp,
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
     generateChallenge: () => Challenge = () => new DefaultChallenge()
@@ -78,6 +79,7 @@ class PasskeyVerificationServiceImpl(
 
   private val transports: Option[Set[AuthenticatorTransport]] = None
 
+  // TODO: challenge in DB
   def creationOptions(userId: String): Future[PublicKeyCredentialCreationOptions] = {
     val userInfo = new PublicKeyCredentialUserEntity(userId.getBytes(UTF_8), userId, userId)
     val challenge = generateChallenge()
@@ -100,6 +102,31 @@ class PasskeyVerificationServiceImpl(
       }
   }
 
+  // TODO: challenge management and record in DB
+  override def register(userId: String, jsonCreationResponse: String): Future[CredentialRecord] = {
+    val regData = webAuthnManager.parseRegistrationResponseJSON(jsonCreationResponse)
+    val challenge = generateChallenge()
+    val regParams = new RegistrationParameters(
+      new ServerProperty(
+        app.origin,
+        app.host,
+        challenge
+      ),
+      publicKeyCredentialParameters.asJava,
+      userVerificationRequired
+    )
+    val verified = webAuthnManager.verify(regData, regParams)
+    Future.successful(
+      new CredentialRecordImpl(
+        verified.getAttestationObject,
+        verified.getCollectedClientData,
+        verified.getClientExtensions,
+        verified.getTransports
+      )
+    )
+  }
+
+  // TODO: challenge in DB
   def authenticationOptions(userId: String): Future[PublicKeyCredentialRequestOptions] = {
     val challenge = generateChallenge()
     val rpId = app.host

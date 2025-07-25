@@ -1,4 +1,4 @@
-package com.gu.playpasskeyauth.model
+package com.gu.playpasskeyauth.models
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -11,7 +11,7 @@ import com.webauthn4j.data.{
   PublicKeyCredentialUserEntity
 }
 import com.webauthn4j.util.Base64UrlUtil
-import play.api.libs.json.{JsValue, Json, Writes}
+import play.api.libs.json.{JsNull, JsValue, Json, Writes}
 
 object JsonEncodings {
 
@@ -20,6 +20,9 @@ object JsonEncodings {
 
   given Writes[PublicKeyCredentialRequestOptions] with
     def writes(options: PublicKeyCredentialRequestOptions): JsValue = Json.parse(mapper.writeValueAsString(options))
+
+  given Writes[Unit] with
+    def writes(u: Unit): JsValue = JsNull
 
   /*
    * As the webauthn library uses Jackson annotations to generate JSON encodings,
