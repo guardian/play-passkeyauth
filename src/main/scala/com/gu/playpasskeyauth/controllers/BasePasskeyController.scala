@@ -12,12 +12,11 @@ import play.api.mvc.Results.InternalServerError
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Controller for handling passkey registration and verification. */
-class PasskeyController[R[_]](
+abstract class BasePasskeyController[R[_]](
     controllerComponents: ControllerComponents,
     customAction: ActionBuilder[R, AnyContent],
-    reqHelper: RequestHelper[R],
     passkeyService: PasskeyVerificationService
-)(using ec: ExecutionContext)
+)(using reqHelper: RequestHelper[R], ec: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
 

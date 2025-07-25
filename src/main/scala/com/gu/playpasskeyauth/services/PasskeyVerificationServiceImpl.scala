@@ -24,7 +24,7 @@ import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
 class PasskeyVerificationServiceImpl(
-    app: com.gu.playpasskeyauth.models.HostApp,
+    app: HostApp,
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
     generateChallenge: () => Challenge = () => new DefaultChallenge()
