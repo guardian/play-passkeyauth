@@ -79,28 +79,27 @@ class PasskeyVerificationServiceImpl(
 
   private val transports: Option[Set[AuthenticatorTransport]] = None
 
-  // TODO: challenge in DB
-  def creationOptions(userId: String): Future[PublicKeyCredentialCreationOptions] = {
-    val userInfo = new PublicKeyCredentialUserEntity(userId.getBytes(UTF_8), userId, userId)
-    val challenge = generateChallenge()
-    passkeyRepo
-      .loadPasskeyIds(userId)
-      .map { passkeyIds =>
-        val excludeCredentials = passkeyIds.map(toDescriptor)
-        new PublicKeyCredentialCreationOptions(
-          relyingParty,
-          userInfo,
-          challenge,
-          publicKeyCredentialParameters.asJava,
-          timeout.toMillis,
-          excludeCredentials.asJava,
-          authenticatorSelection,
-          hints.asJava,
-          attestation,
-          creationExtensions
-        )
-      }
-  }
+  def creationOptions(userId: String): Future[PublicKeyCredentialCreationOptions] =
+    for {
+      passkeyIds <- passkeyRepo.loadPasskeyIds(userId)
+      challenge = generateChallenge()
+      _ <- challengeRepo.insertRegistrationChallenge(userId, challenge)
+    } yield {
+      val userInfo = new PublicKeyCredentialUserEntity(userId.getBytes(UTF_8), userId, userId)
+      val excludeCredentials = passkeyIds.map(toDescriptor)
+      new PublicKeyCredentialCreationOptions(
+        relyingParty,
+        userInfo,
+        challenge,
+        publicKeyCredentialParameters.asJava,
+        timeout.toMillis,
+        excludeCredentials.asJava,
+        authenticatorSelection,
+        hints.asJava,
+        attestation,
+        creationExtensions
+      )
+    }
 
   // TODO: challenge management and record in DB
   override def register(userId: String, jsonCreationResponse: String): Future[CredentialRecord] = {
