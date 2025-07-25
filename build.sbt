@@ -3,6 +3,8 @@ val playVersion = "3.0.8"
 lazy val root = project
   .in(file("."))
   .settings(
+    licenses := Seq(License.Apache2),
+    organization := "com.gu",
     name := "play-passkeyauth",
     version := "0.1.0-SNAPSHOT",
     scalaVersion := "3.3.6",
