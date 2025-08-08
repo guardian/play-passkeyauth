@@ -38,10 +38,10 @@ abstract class BasePasskeyController[R[_]](
       userId <- reqExtractor
         .findUserId(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Register request missing user ID")))
-      jsonCreationResponse <- reqExtractor
+      creationResponse <- reqExtractor
         .findCreationData(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Register request missing creation data")))
-      _ <- passkeyService.register(userId, jsonCreationResponse)
+      _ <- passkeyService.register(userId, creationResponse)
     } yield ())
   }
 

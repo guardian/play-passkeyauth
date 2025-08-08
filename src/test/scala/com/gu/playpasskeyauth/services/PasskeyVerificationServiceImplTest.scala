@@ -9,6 +9,7 @@ import org.mockito.Mockito.*
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
+import play.api.libs.json.{JsObject, Json}
 
 import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
@@ -99,11 +100,11 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
   "register" must {
     "return credential record for valid registration response" ignore {
       val service = createService()
-      val jsonResponse = """{"id":"test","response":{"attestationObject":"test","clientDataJSON":"test"}}"""
+      val response = Json.parse("""{"id":"test","response":{"attestationObject":"test","clientDataJSON":"test"}}""")
 
       // This test would need a more complex setup with WebAuthnManager mocking
       // For now, testing that the method exists and has correct signature
-      noException must be thrownBy service.register(testUserId, jsonResponse)
+      noException must be thrownBy service.register(testUserId, response)
     }
   }
 
@@ -180,7 +181,7 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
       when(challengeRepo.loadAuthenticationChallenge(testUserId)).thenReturn(Future.successful(None))
 
       val service = createService(challengeRepo = challengeRepo)
-      val authData = mock[AuthenticationData]
+      val authData = mock[JsObject]
 
       val result = service.verify(testUserId, authData)
 
@@ -195,8 +196,7 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
       when(challengeRepo.loadAuthenticationChallenge(testUserId)).thenReturn(Future.successful(Some(testChallenge)))
       when(passkeyRepo.loadCredentialRecord(testUserId, credentialId)).thenReturn(Future.successful(None))
 
-      val authData = mock[AuthenticationData]
-      when(authData.getCredentialId).thenReturn(credentialId)
+      val authData = mock[JsObject]
 
       val service = createService(passkeyRepo, challengeRepo)
       val result = service.verify(testUserId, authData)
@@ -209,12 +209,11 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
       val passkeyRepo = mock[PasskeyRepository]
       val credentialRecord = mock[CredentialRecord]
       val credentialId = "test-credential-id".getBytes(UTF_8)
-      val authData = mock[AuthenticationData]
+      val authData = mock[JsObject]
 
       when(challengeRepo.loadAuthenticationChallenge(testUserId)).thenReturn(Future.successful(Some(testChallenge)))
       when(passkeyRepo.loadCredentialRecord(testUserId, credentialId))
         .thenReturn(Future.successful(Some(credentialRecord)))
-      when(authData.getCredentialId).thenReturn(credentialId)
       when(challengeRepo.deleteAuthenticationChallenge(testUserId)).thenReturn(Future.successful(()))
       when(passkeyRepo.updateAuthenticationCounter(eqTo(testUserId), any[AuthenticationData]))
         .thenReturn(Future.successful(()))
@@ -239,12 +238,11 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
       val passkeyRepo = mock[PasskeyRepository]
       val credentialRecord = mock[CredentialRecord]
       val credentialId = "test-credential-id".getBytes(UTF_8)
-      val authData = mock[AuthenticationData]
+      val authData = mock[JsObject]
 
       when(challengeRepo.loadAuthenticationChallenge(testUserId)).thenReturn(Future.successful(Some(testChallenge)))
       when(passkeyRepo.loadCredentialRecord(testUserId, credentialId))
         .thenReturn(Future.successful(Some(credentialRecord)))
-      when(authData.getCredentialId).thenReturn(credentialId)
       when(challengeRepo.deleteAuthenticationChallenge(testUserId)).thenReturn(Future.successful(()))
       when(passkeyRepo.updateAuthenticationCounter(eqTo(testUserId), any[AuthenticationData]))
         .thenReturn(Future.successful(()))
@@ -266,12 +264,11 @@ class PasskeyVerificationServiceImplTest extends PlaySpec with MockitoSugar with
       val passkeyRepo = mock[PasskeyRepository]
       val credentialRecord = mock[CredentialRecord]
       val credentialId = "test-credential-id".getBytes(UTF_8)
-      val authData = mock[AuthenticationData]
+      val authData = mock[JsObject]
 
       when(challengeRepo.loadAuthenticationChallenge(testUserId)).thenReturn(Future.successful(Some(testChallenge)))
       when(passkeyRepo.loadCredentialRecord(testUserId, credentialId))
         .thenReturn(Future.successful(Some(credentialRecord)))
-      when(authData.getCredentialId).thenReturn(credentialId)
       when(challengeRepo.deleteAuthenticationChallenge(testUserId)).thenReturn(Future.successful(()))
       when(passkeyRepo.updateAuthenticationCounter(eqTo(testUserId), any[AuthenticationData]))
         .thenReturn(Future.successful(()))

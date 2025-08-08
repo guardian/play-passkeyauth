@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.controllers
 
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.web.RequestHelper
+import com.gu.playpasskeyauth.web.RequestExtractor
 import com.webauthn4j.credential.CredentialRecord
 import com.webauthn4j.data.*
 import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
@@ -12,6 +12,7 @@ import org.mockito.Mockito.*
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.*
+import play.api.libs.json.Json
 import play.api.mvc.*
 import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
@@ -26,7 +27,7 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
   )
 
   private val testUserId = "user123"
-  private val testJsonCreationResponse = """{"id":"test","response":{"clientDataJSON":"test"}}"""
+  private val testCreationResponse = Json.parse("""{"id":"test","response":{"clientDataJSON":"test"}}""")
 
   private def createTestCreationOptions(): PublicKeyCredentialCreationOptions = {
     val rp = new PublicKeyCredentialRpEntity("example.com", "Test App")
@@ -48,27 +49,27 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
       controllerComponents: ControllerComponents,
       customAction: ActionBuilder[Request, AnyContent],
       service: PasskeyVerificationService
-  )(using requestHelper: RequestHelper[Request], ec: ExecutionContext)
+  )(using RequestExtractor: RequestExtractor[Request], ec: ExecutionContext)
       extends BasePasskeyController[Request](controllerComponents, customAction, service)
 
   private def createController(
-      requestHelper: RequestHelper[Request] = mock[RequestHelper[Request]],
+      RequestExtractor: RequestExtractor[Request] = mock[RequestExtractor[Request]],
       service: PasskeyVerificationService = mock[PasskeyVerificationService]
   ): TestPasskeyController = {
     val controllerComponents = Helpers.stubControllerComponents()
     val customAction = controllerComponents.actionBuilder
-    new TestPasskeyController(controllerComponents, customAction, service)(using requestHelper)
+    new TestPasskeyController(controllerComponents, customAction, service)(using RequestExtractor)
   }
 
   "creationOptions" should {
 
     "return 200 OK on success" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.successful(createTestCreationOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -76,12 +77,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return JSON content type on success" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.successful(createTestCreationOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -89,12 +90,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return valid JSON response body" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.successful(createTestCreationOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -103,12 +104,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "include rp field in JSON response" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.successful(createTestCreationOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -117,12 +118,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "include user field in JSON response" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.successful(createTestCreationOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -131,12 +132,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "include challenge field in JSON response" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.successful(createTestCreationOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -145,12 +146,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "include pubKeyCredParams field in JSON response" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.successful(createTestCreationOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -159,10 +160,10 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 400 Bad Request when user ID is missing" in {
-      val requestHelper = mock[RequestHelper[Request]]
-      when(requestHelper.findUserId(any())).thenReturn(None)
+      val RequestExtractor = mock[RequestExtractor[Request]]
+      when(RequestExtractor.findUserId(any())).thenReturn(None)
 
-      val controller = createController(requestHelper)
+      val controller = createController(RequestExtractor)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -170,10 +171,10 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return error message when user ID is missing" in {
-      val requestHelper = mock[RequestHelper[Request]]
-      when(requestHelper.findUserId(any())).thenReturn(None)
+      val RequestExtractor = mock[RequestExtractor[Request]]
+      when(RequestExtractor.findUserId(any())).thenReturn(None)
 
-      val controller = createController(requestHelper)
+      val controller = createController(RequestExtractor)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -181,12 +182,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 500 Internal Server Error when service fails" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.failed(new RuntimeException("Service error")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -194,12 +195,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return error message when service fails" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.failed(new RuntimeException("Service error")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -207,12 +208,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 400 Bad Request for IllegalArgumentException from service" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.creationOptions(testUserId)).thenReturn(Future.failed(new IllegalArgumentException("Invalid user")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/creation-options")
       val result = controller.creationOptions()(request)
 
@@ -223,14 +224,14 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
   "register" should {
 
     "return 204 No Content on success" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
       val credentialRecord = mock[CredentialRecord]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
-      when(requestHelper.findCreationData(any())).thenReturn(Some(testJsonCreationResponse))
-      when(service.register(testUserId, testJsonCreationResponse)).thenReturn(Future.successful(credentialRecord))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findCreationData(any())).thenReturn(Some(testCreationResponse))
+      when(service.register(testUserId, testCreationResponse)).thenReturn(Future.successful(credentialRecord))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(POST, "/register")
       val result = controller.register()(request)
 
@@ -238,10 +239,10 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 400 Bad Request when user ID is missing" in {
-      val requestHelper = mock[RequestHelper[Request]]
-      when(requestHelper.findUserId(any())).thenReturn(None)
+      val RequestExtractor = mock[RequestExtractor[Request]]
+      when(RequestExtractor.findUserId(any())).thenReturn(None)
 
-      val controller = createController(requestHelper)
+      val controller = createController(RequestExtractor)
       val request = FakeRequest(POST, "/register")
       val result = controller.register()(request)
 
@@ -249,10 +250,10 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return error message when user ID is missing" in {
-      val requestHelper = mock[RequestHelper[Request]]
-      when(requestHelper.findUserId(any())).thenReturn(None)
+      val RequestExtractor = mock[RequestExtractor[Request]]
+      when(RequestExtractor.findUserId(any())).thenReturn(None)
 
-      val controller = createController(requestHelper)
+      val controller = createController(RequestExtractor)
       val request = FakeRequest(POST, "/register")
       val result = controller.register()(request)
 
@@ -260,11 +261,11 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 400 Bad Request when creation data is missing" in {
-      val requestHelper = mock[RequestHelper[Request]]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
-      when(requestHelper.findCreationData(any())).thenReturn(None)
+      val RequestExtractor = mock[RequestExtractor[Request]]
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findCreationData(any())).thenReturn(None)
 
-      val controller = createController(requestHelper)
+      val controller = createController(RequestExtractor)
       val request = FakeRequest(POST, "/register")
       val result = controller.register()(request)
 
@@ -272,11 +273,11 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return error message when creation data is missing" in {
-      val requestHelper = mock[RequestHelper[Request]]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
-      when(requestHelper.findCreationData(any())).thenReturn(None)
+      val RequestExtractor = mock[RequestExtractor[Request]]
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findCreationData(any())).thenReturn(None)
 
-      val controller = createController(requestHelper)
+      val controller = createController(RequestExtractor)
       val request = FakeRequest(POST, "/register")
       val result = controller.register()(request)
 
@@ -284,14 +285,14 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 500 Internal Server Error when service fails" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
-      when(requestHelper.findCreationData(any())).thenReturn(Some(testJsonCreationResponse))
-      when(service.register(testUserId, testJsonCreationResponse))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findCreationData(any())).thenReturn(Some(testCreationResponse))
+      when(service.register(testUserId, testCreationResponse))
         .thenReturn(Future.failed(new RuntimeException("Registration failed")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(POST, "/register")
       val result = controller.register()(request)
 
@@ -299,14 +300,14 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return error message when service fails" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
-      when(requestHelper.findCreationData(any())).thenReturn(Some(testJsonCreationResponse))
-      when(service.register(testUserId, testJsonCreationResponse))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findCreationData(any())).thenReturn(Some(testCreationResponse))
+      when(service.register(testUserId, testCreationResponse))
         .thenReturn(Future.failed(new RuntimeException("Registration failed")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(POST, "/register")
       val result = controller.register()(request)
 
@@ -314,14 +315,14 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 400 Bad Request for IllegalArgumentException from service" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
-      when(requestHelper.findCreationData(any())).thenReturn(Some(testJsonCreationResponse))
-      when(service.register(testUserId, testJsonCreationResponse))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findCreationData(any())).thenReturn(Some(testCreationResponse))
+      when(service.register(testUserId, testCreationResponse))
         .thenReturn(Future.failed(new IllegalArgumentException("Invalid registration data")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(POST, "/register")
       val result = controller.register()(request)
 
@@ -332,12 +333,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
   "authenticationOptions" should {
 
     "return 200 OK on success" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.authenticationOptions(testUserId)).thenReturn(Future.successful(createTestRequestOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -345,12 +346,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return JSON content type on success" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.authenticationOptions(testUserId)).thenReturn(Future.successful(createTestRequestOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -358,12 +359,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return valid JSON response body" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.authenticationOptions(testUserId)).thenReturn(Future.successful(createTestRequestOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -372,12 +373,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "include challenge field in JSON response" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.authenticationOptions(testUserId)).thenReturn(Future.successful(createTestRequestOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -386,12 +387,12 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "include rpId field in JSON response" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.authenticationOptions(testUserId)).thenReturn(Future.successful(createTestRequestOptions()))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -400,10 +401,10 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 400 Bad Request when user ID is missing" in {
-      val requestHelper = mock[RequestHelper[Request]]
-      when(requestHelper.findUserId(any())).thenReturn(None)
+      val RequestExtractor = mock[RequestExtractor[Request]]
+      when(RequestExtractor.findUserId(any())).thenReturn(None)
 
-      val controller = createController(requestHelper)
+      val controller = createController(RequestExtractor)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -411,10 +412,10 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return error message when user ID is missing" in {
-      val requestHelper = mock[RequestHelper[Request]]
-      when(requestHelper.findUserId(any())).thenReturn(None)
+      val RequestExtractor = mock[RequestExtractor[Request]]
+      when(RequestExtractor.findUserId(any())).thenReturn(None)
 
-      val controller = createController(requestHelper)
+      val controller = createController(RequestExtractor)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -422,13 +423,13 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 500 Internal Server Error when service fails" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.authenticationOptions(testUserId))
         .thenReturn(Future.failed(new RuntimeException("Auth options failed")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -436,13 +437,13 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return error message when service fails" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.authenticationOptions(testUserId))
         .thenReturn(Future.failed(new RuntimeException("Auth options failed")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 
@@ -450,13 +451,13 @@ class BasePasskeyControllerTest extends PlaySpec with MockitoSugar with ScalaFut
     }
 
     "return 400 Bad Request for IllegalArgumentException from service" in {
-      val requestHelper = mock[RequestHelper[Request]]
+      val RequestExtractor = mock[RequestExtractor[Request]]
       val service = mock[PasskeyVerificationService]
-      when(requestHelper.findUserId(any())).thenReturn(Some(testUserId))
+      when(RequestExtractor.findUserId(any())).thenReturn(Some(testUserId))
       when(service.authenticationOptions(testUserId))
         .thenReturn(Future.failed(new IllegalArgumentException("Invalid auth request")))
 
-      val controller = createController(requestHelper, service)
+      val controller = createController(RequestExtractor, service)
       val request = FakeRequest(GET, "/authentication-options")
       val result = controller.authenticationOptions()(request)
 

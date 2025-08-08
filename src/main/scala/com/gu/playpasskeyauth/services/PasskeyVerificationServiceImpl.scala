@@ -16,6 +16,7 @@ import com.webauthn4j.data.extension.client.{
 }
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.util.Base64UrlUtil
+import play.api.libs.json.JsValue
 
 import java.nio.charset.StandardCharsets.UTF_8
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -113,8 +114,8 @@ class PasskeyVerificationServiceImpl(
     }
 
   // TODO: challenge management and record in DB
-  override def register(userId: String, jsonCreationResponse: String): Future[CredentialRecord] = {
-    val regData = webAuthnManager.parseRegistrationResponseJSON(jsonCreationResponse)
+  override def register(userId: String, creationResponse: JsValue): Future[CredentialRecord] = {
+    val regData = webAuthnManager.parseRegistrationResponseJSON(creationResponse.toString)
     val challenge = generateChallenge()
     val regParams = new RegistrationParameters(
       new ServerProperty(
@@ -155,10 +156,11 @@ class PasskeyVerificationServiceImpl(
       )
     }
 
-  def verify(userId: String, authData: AuthenticationData): Future[AuthenticationData] =
+  def verify(userId: String, authenticationResponse: JsValue): Future[AuthenticationData] =
     for {
       optChallenge <- challengeRepo.loadAuthenticationChallenge(userId)
       challenge <- optChallenge.toFutureOr(Future.failed(new RuntimeException("Challenge not found")))
+      authData <- Future.fromTry(Try(webAuthnManager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
       optPasskey <- passkeyRepo.loadCredentialRecord(userId, authData.getCredentialId)
       passkey <- optPasskey.toFutureOr(Future.failed(new RuntimeException("Passkey not found")))
       serverProps = new ServerProperty(app.origin, app.host, challenge)

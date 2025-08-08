@@ -1,11 +1,11 @@
 package com.gu.playpasskeyauth.web
 
-import com.webauthn4j.data.AuthenticationData
+import play.api.libs.json.JsValue
 
 trait RequestExtractor[R[_]] {
   def findUserId[A](request: R[A]): Option[String]
 
-  def findCreationData[A](request: R[A]): Option[String]
+  def findCreationData[A](request: R[A]): Option[JsValue]
 
-  def findAuthenticationData[A](request: R[A]): Option[AuthenticationData]
+  def findAuthenticationData[A](request: R[A]): Option[JsValue]
 }
