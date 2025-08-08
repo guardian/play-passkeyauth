@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.filters
 
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.web.RequestHelper
+import com.gu.playpasskeyauth.web.RequestExtractor
 import com.webauthn4j.data.AuthenticationData
 import play.api.Logging
 import play.api.mvc.Results.{BadRequest, InternalServerError}
@@ -15,17 +15,17 @@ import com.gu.playpasskeyauth.utilities.Utilities.*
   * See [[https://webauthn4j.github.io/webauthn4j/en/#webauthn-assertion-verification-and-post-processing]].
   */
 class PasskeyVerificationFilter[R[_]](verifier: PasskeyVerificationService)(using
-    reqHelper: RequestHelper[R],
+    reqExtractor: RequestExtractor[R],
     val executionContext: ExecutionContext
 ) extends ActionFilter[R]
     with Logging {
 
   def filter[A](request: R[A]): Future[Option[Result]] =
     apiResponse(for {
-      userId <- reqHelper
+      userId <- reqExtractor
         .findUserId(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Request missing user ID")))
-      authData <- reqHelper
+      authData <- reqExtractor
         .findAuthenticationData(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Request missing authentication data")))
       response <- verifier.verify(userId, authData)

@@ -29,7 +29,7 @@ object JsonEncodings {
    * we might as well use them instead of generating our own JSON models.
    * This will help with futureproofing.
    */
-  val mapper: ObjectMapper = {
+  private val mapper: ObjectMapper = {
     val mapper = new ObjectMapper()
     val module = new SimpleModule()
     /*

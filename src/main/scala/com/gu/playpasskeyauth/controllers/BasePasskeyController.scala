@@ -3,7 +3,7 @@ package com.gu.playpasskeyauth.controllers
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
 import com.gu.playpasskeyauth.utilities.Utilities.*
-import com.gu.playpasskeyauth.web.RequestHelper
+import com.gu.playpasskeyauth.web.RequestExtractor
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -16,7 +16,7 @@ abstract class BasePasskeyController[R[_]](
     controllerComponents: ControllerComponents,
     customAction: ActionBuilder[R, AnyContent],
     passkeyService: PasskeyVerificationService
-)(using reqHelper: RequestHelper[R], ec: ExecutionContext)
+)(using reqExtractor: RequestExtractor[R], ec: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
 
@@ -24,7 +24,7 @@ abstract class BasePasskeyController[R[_]](
     */
   def creationOptions: Action[Unit] = customAction.async(parse.empty) { request =>
     apiResponse(for {
-      userId <- reqHelper
+      userId <- reqExtractor
         .findUserId(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Creation options request missing user ID")))
       options <- passkeyService.creationOptions(userId)
@@ -35,10 +35,10 @@ abstract class BasePasskeyController[R[_]](
     */
   def register: Action[AnyContent] = customAction.async { request =>
     apiResponse(for {
-      userId <- reqHelper
+      userId <- reqExtractor
         .findUserId(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Register request missing user ID")))
-      jsonCreationResponse <- reqHelper
+      jsonCreationResponse <- reqExtractor
         .findCreationData(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Register request missing creation data")))
       _ <- passkeyService.register(userId, jsonCreationResponse)
@@ -49,7 +49,7 @@ abstract class BasePasskeyController[R[_]](
     */
   def authenticationOptions: Action[Unit] = customAction.async(parse.empty) { request =>
     apiResponse(for {
-      userId <- reqHelper
+      userId <- reqExtractor
         .findUserId(request)
         .toFutureOr(Future.failed(new IllegalArgumentException("Auth options request missing user ID")))
       options <- passkeyService.authenticationOptions(userId)

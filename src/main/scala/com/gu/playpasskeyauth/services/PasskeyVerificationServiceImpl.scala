@@ -59,7 +59,17 @@ class PasskeyVerificationServiceImpl(
 
   private val timeout = Duration(60, SECONDS)
 
-  private val authenticatorSelection = {
+  private val authenticatorsForCreation = {
+    // Allow the widest possible range of authenticators
+    val authenticatorAttachment: AuthenticatorAttachment = null
+    new AuthenticatorSelectionCriteria(
+      authenticatorAttachment,
+      ResidentKeyRequirement.REQUIRED,
+      UserVerificationRequirement.REQUIRED
+    )
+  }
+
+  private val authenticatorsForAuthentication = {
     // Allow the widest possible range of authenticators
     val authenticatorAttachment: AuthenticatorAttachment = null
     new AuthenticatorSelectionCriteria(
@@ -95,7 +105,7 @@ class PasskeyVerificationServiceImpl(
         publicKeyCredentialParameters.asJava,
         timeout.toMillis,
         excludeCredentials.asJava,
-        authenticatorSelection,
+        authenticatorsForCreation,
         hints.asJava,
         attestation,
         creationExtensions
