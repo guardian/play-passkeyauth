@@ -115,7 +115,6 @@ class PasskeyVerificationServiceImpl(
 
   // TODO: challenge management and record in DB
   override def register(userId: String, creationResponse: JsValue): Future[CredentialRecord] = {
-    val regData = webAuthnManager.parseRegistrationResponseJSON(creationResponse.toString)
     val challenge = generateChallenge()
     val regParams = new RegistrationParameters(
       new ServerProperty(
@@ -126,7 +125,7 @@ class PasskeyVerificationServiceImpl(
       publicKeyCredentialParameters.asJava,
       userVerificationRequired
     )
-    val verified = webAuthnManager.verify(regData, regParams)
+    val verified = webAuthnManager.verifyRegistrationResponseJSON(creationResponse.toString, regParams)
     Future.successful(
       new CredentialRecordImpl(
         verified.getAttestationObject,
