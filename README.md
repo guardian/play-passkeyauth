@@ -1,4 +1,13 @@
-# Play passkey authentication
+# Play Passkey Authentication
+
+A library that integrates [webauthn4j](https://github.com/webauthn4j/webauthn4j) in a 
+[Play framework](https://www.playframework.com/) app,   
+providing the server-side registration and verification services of 
+the [Web Authentication standard](https://www.passkeys.com/what-is-webauthn).
+
+## How to use
+
+TODO
 
 ## General information about passkeys
 
