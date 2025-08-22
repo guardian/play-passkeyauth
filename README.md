@@ -1,14 +1,53 @@
 # Play Passkey Authentication
 
+[![Build Status](https://github.com/guardian/play-passkeyauth/workflows/CI/badge.svg)](https://github.com/guardian/play-passkeyauth/actions)
+[![Latest Release](https://img.shields.io/maven-central/v/com.webauthn4j/webauthn4j-core.svg)](https://search.maven.org/artifact/com.webauthn4j/webauthn4j-core)
+[![Scala Version](https://img.shields.io/badge/scala-3.3-red.svg)](https://scala-lang.org/)
+[![Play Version](https://img.shields.io/badge/play-3.0-green.svg)](https://www.playframework.com/)
+
 A library that integrates [webauthn4j](https://github.com/webauthn4j/webauthn4j) in a 
 [Play framework](https://www.playframework.com/) app,   
 providing the server-side registration and verification services of 
 the [Web Authentication standard](https://www.passkeys.com/what-is-webauthn).
 
-## How to use
+## Why use this library?
+
+TODO explains benefits over manual webauthn4j integration
+
+## Installation
+Add to your `build.sbt`:
+```scala
+libraryDependencies += "com.yourorg" %% "play-passkey-auth" % "0.0.1"
+```
+
+## API
 
 TODO
 
+TODO: add seq diag
+
+## Configuration
+
+TODO
+
+## Structure
+
+The library is storage-agnostic.  You must decide how best to store passkey data in your infrastructure.
+Consequently, the integration depends on the implementation of some service traits.
+
+## Integration steps
+
+1. Implement [PasskeyRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyRepository.scala).
+1. Implement [PasskeyChallengeRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyChallengeRepository.scala).
+1. Create an instance of [web.RequestExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestExtractor.scala) for your user handle type.
+1. Implement [BasePasskeyController](src/main/scala/com/gu/playpasskeyauth/controllers/BasePasskeyController.scala).
+
+## Code Examples
+ show actual Scala/Play code
+ how to handle common failure cases
+ how it fits into existing Play apps
+
+TODO: Below to be moved elsewhere
 ## General information about passkeys
 
 ### Terminology

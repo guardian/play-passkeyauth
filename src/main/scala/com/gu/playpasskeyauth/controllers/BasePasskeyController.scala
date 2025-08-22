@@ -26,7 +26,7 @@ abstract class BasePasskeyController[R[_]](
     apiResponse(for {
       userId <- reqExtractor
         .findUserId(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Creation options request missing user ID")))
+        .toFutureOr(Future.failed(new IllegalArgumentException("Creation options request is missing user ID")))
       options <- passkeyService.creationOptions(userId)
     } yield options)
   }
@@ -37,10 +37,10 @@ abstract class BasePasskeyController[R[_]](
     apiResponse(for {
       userId <- reqExtractor
         .findUserId(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Register request missing user ID")))
+        .toFutureOr(Future.failed(new IllegalArgumentException("Register request is missing user ID")))
       creationResponse <- reqExtractor
         .findCreationData(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Register request missing creation data")))
+        .toFutureOr(Future.failed(new IllegalArgumentException("Register request is missing creation data")))
       _ <- passkeyService.register(userId, creationResponse)
     } yield ())
   }
@@ -51,7 +51,7 @@ abstract class BasePasskeyController[R[_]](
     apiResponse(for {
       userId <- reqExtractor
         .findUserId(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Auth options request missing user ID")))
+        .toFutureOr(Future.failed(new IllegalArgumentException("Auth options request is missing user ID")))
       options <- passkeyService.authenticationOptions(userId)
     } yield options)
   }
