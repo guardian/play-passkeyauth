@@ -24,17 +24,17 @@ class PasskeyVerificationFilter[R[_]](verifier: PasskeyVerificationService)(usin
     apiResponse(for {
       userId <- reqExtractor
         .findUserId(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Request missing user ID")))
+        .toFutureOr(Future.failed(new IllegalArgumentException("Request is missing user ID")))
       authData <- reqExtractor
         .findAuthenticationData(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Request missing authentication data")))
+        .toFutureOr(Future.failed(new IllegalArgumentException("Request is missing passkey")))
       response <- verifier.verify(userId, authData)
     } yield response)
 
   private def apiResponse(auth: => Future[AuthenticationData]): Future[Option[Result]] =
     auth
       .map { _ =>
-        logger.info("Verified authentication data")
+        logger.info("Verified passkey")
         None
       }
       .recover {
