@@ -16,6 +16,6 @@ lazy val root = project
       "com.webauthn4j" % "webauthn4j-core" % "0.29.5.RELEASE",
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.19.2" % Runtime
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0" % Runtime
     )
   )
