@@ -6,8 +6,7 @@ lazy val root = project
     licenses := Seq(License.Apache2),
     organization := "com.gu",
     name := "play-passkeyauth",
-//    version := "0.1.0-SNAPSHOT",
-    version := "0.1.4-SNAPSHOT",
+    version := "0.1.0-SNAPSHOT",
     scalaVersion := "3.3.6",
     scalacOptions ++= Seq("-deprecation", "-explain", "-Werror"),
     scalafmtOnCompile := true,
@@ -16,6 +15,8 @@ lazy val root = project
       "com.webauthn4j" % "webauthn4j-core" % "0.29.5.RELEASE",
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0" % Runtime
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0" % Runtime,
+      // TODO remove
+      "com.gu.play-googleauth" %% "play-v30" % "25.2.2",
     )
   )

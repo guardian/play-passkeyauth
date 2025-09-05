@@ -1,9 +1,9 @@
 package com.gu.playpasskeyauth.controllers
 
+import com.gu.googleauth.AuthAction
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.utilities.Utilities.*
-import com.gu.playpasskeyauth.web.RequestExtractor
+import com.gu.playpasskeyauth.web.{AuthenticationDataAction, CreationDataRequest}
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -12,48 +12,35 @@ import play.api.mvc.Results.InternalServerError
 import scala.concurrent.{ExecutionContext, Future}
 
 /** Controller for handling passkey registration and verification. */
-abstract class BasePasskeyController[R[_]](
+abstract class BasePasskeyController(
     controllerComponents: ControllerComponents,
-    customAction: ActionBuilder[R, AnyContent],
+    authAction: AuthAction[AnyContent],
+    userAndCreationDataAction: ActionBuilder[CreationDataRequest, AnyContent],
     passkeyService: PasskeyVerificationService
-)(using reqExtractor: RequestExtractor[R], ec: ExecutionContext)
+)(using val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
 
+  // TODO remove
+//  private val creationDataAction = new CreationDataAction(???)
+//  private val userAndCreationDataAction = authAction.andThen(creationDataAction)
+
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-credential-key-pair]].
     */
-  def creationOptions: Action[Unit] = customAction.async(parse.empty) { request =>
-    apiResponse(for {
-      userId <- reqExtractor
-        .findUserId(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Creation options request is missing user ID")))
-      options <- passkeyService.creationOptions(userId)
-    } yield options)
+  def creationOptions: Action[Unit] = authAction.async(parse.empty) { request =>
+    apiResponse(passkeyService.creationOptions(request.user))
   }
 
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#registering-the-webauthn-public-key-credential-on-the-server]].
     */
-  def register: Action[AnyContent] = customAction.async { request =>
-    apiResponse(for {
-      userId <- reqExtractor
-        .findUserId(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Register request is missing user ID")))
-      creationResponse <- reqExtractor
-        .findCreationData(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Register request is missing creation data")))
-      _ <- passkeyService.register(userId, creationResponse)
-    } yield ())
+  def register: Action[AnyContent] = userAndCreationDataAction.async { request =>
+    apiResponse(passkeyService.register(request.user, request.creationData).map(_ => ()))
   }
 
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-assertion]].
     */
-  def authenticationOptions: Action[Unit] = customAction.async(parse.empty) { request =>
-    apiResponse(for {
-      userId <- reqExtractor
-        .findUserId(request)
-        .toFutureOr(Future.failed(new IllegalArgumentException("Auth options request is missing user ID")))
-      options <- passkeyService.authenticationOptions(userId)
-    } yield options)
+  def authenticationOptions: Action[Unit] = authAction.async(parse.empty) { request =>
+    apiResponse(passkeyService.authenticationOptions(request.user))
   }
 
   private def apiResponse[A](fa: => Future[A])(using writer: Writes[A]): Future[Result] =

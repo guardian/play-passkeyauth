@@ -10,6 +10,8 @@ A library that integrates [webauthn4j](https://github.com/webauthn4j/webauthn4j)
 providing the server-side registration and verification services of 
 the [Web Authentication standard](https://www.passkeys.com/what-is-webauthn).
 
+From here on is incomplete ...
+
 ## Why use this library?
 
 TODO explains benefits over manual webauthn4j integration
@@ -39,7 +41,7 @@ Consequently, the integration depends on the implementation of some service trai
 
 1. Implement [PasskeyRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyRepository.scala).
 1. Implement [PasskeyChallengeRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyChallengeRepository.scala).
-1. Create an instance of [web.RequestExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestExtractor.scala) for your user handle type.
+1. TODO: this needs to change - Create an instance of web.RequestExtractor for your user handle type.
 1. Implement [BasePasskeyController](src/main/scala/com/gu/playpasskeyauth/controllers/BasePasskeyController.scala).
 
 ## Code Examples

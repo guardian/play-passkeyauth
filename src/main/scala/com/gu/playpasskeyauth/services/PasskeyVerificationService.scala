@@ -1,18 +1,19 @@
 package com.gu.playpasskeyauth.services
 
+import com.gu.googleauth.UserIdentity
 import com.webauthn4j.credential.CredentialRecord
 import com.webauthn4j.data.{AuthenticationData, PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions}
-import play.api.libs.json.{JsObject, JsValue}
+import play.api.libs.json.JsValue
 
 import scala.concurrent.Future
 
 trait PasskeyVerificationService {
 
-  def creationOptions(userId: String): Future[PublicKeyCredentialCreationOptions]
+  def creationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions]
 
-  def register(userId: String, creationResponse: JsValue): Future[CredentialRecord]
+  def register(user: UserIdentity, creationResponse: JsValue): Future[CredentialRecord]
 
-  def authenticationOptions(userId: String): Future[PublicKeyCredentialRequestOptions]
+  def authenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions]
 
-  def verify(userId: String, authenticationResponse: JsValue): Future[AuthenticationData]
+  def verify(user: UserIdentity, authenticationResponse: JsValue): Future[AuthenticationData]
 }

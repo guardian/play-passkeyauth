@@ -1,5 +1,6 @@
 package com.gu.playpasskeyauth.services
 
+import com.gu.googleauth.UserIdentity
 import com.gu.playpasskeyauth.models.HostApp
 import com.gu.playpasskeyauth.utilities.Utilities.*
 import com.webauthn4j.WebAuthnManager
@@ -91,13 +92,13 @@ class PasskeyVerificationServiceImpl(
 
   private val transports: Option[Set[AuthenticatorTransport]] = None
 
-  def creationOptions(userId: String): Future[PublicKeyCredentialCreationOptions] =
+  def creationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions] =
     for {
-      passkeyIds <- passkeyRepo.loadPasskeyIds(userId)
+      passkeyIds <- passkeyRepo.loadPasskeyIds(user.username)
       challenge = generateChallenge()
-      _ <- challengeRepo.insertRegistrationChallenge(userId, challenge)
+      _ <- challengeRepo.insertRegistrationChallenge(user.username, challenge)
     } yield {
-      val userInfo = new PublicKeyCredentialUserEntity(userId.getBytes(UTF_8), userId, userId)
+      val userInfo = new PublicKeyCredentialUserEntity(user.username.getBytes(UTF_8), user.username, user.username)
       val excludeCredentials = passkeyIds.map(toDescriptor)
       new PublicKeyCredentialCreationOptions(
         relyingParty,
@@ -114,7 +115,7 @@ class PasskeyVerificationServiceImpl(
     }
 
   // TODO: challenge management and record in DB
-  override def register(userId: String, creationResponse: JsValue): Future[CredentialRecord] = {
+  override def register(user: UserIdentity, creationResponse: JsValue): Future[CredentialRecord] = {
     val challenge = generateChallenge()
     val regParams = new RegistrationParameters(
       new ServerProperty(
@@ -136,11 +137,11 @@ class PasskeyVerificationServiceImpl(
     )
   }
 
-  def authenticationOptions(userId: String): Future[PublicKeyCredentialRequestOptions] =
+  def authenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions] =
     for {
-      passkeyIds <- passkeyRepo.loadPasskeyIds(userId)
+      passkeyIds <- passkeyRepo.loadPasskeyIds(user.username)
       challenge = generateChallenge()
-      _ <- challengeRepo.insertAuthenticationChallenge(userId, challenge)
+      _ <- challengeRepo.insertAuthenticationChallenge(user.username, challenge)
     } yield {
       val rpId = app.host
       val allowCredentials = passkeyIds.map(toDescriptor)
@@ -155,12 +156,12 @@ class PasskeyVerificationServiceImpl(
       )
     }
 
-  def verify(userId: String, authenticationResponse: JsValue): Future[AuthenticationData] =
+  def verify(user: UserIdentity, authenticationResponse: JsValue): Future[AuthenticationData] =
     for {
-      optChallenge <- challengeRepo.loadAuthenticationChallenge(userId)
+      optChallenge <- challengeRepo.loadAuthenticationChallenge(user.username)
       challenge <- optChallenge.toFutureOr(Future.failed(new RuntimeException("Challenge not found")))
       authData <- Future.fromTry(Try(webAuthnManager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
-      optPasskey <- passkeyRepo.loadCredentialRecord(userId, authData.getCredentialId)
+      optPasskey <- passkeyRepo.loadCredentialRecord(user.username, authData.getCredentialId)
       passkey <- optPasskey.toFutureOr(Future.failed(new RuntimeException("Passkey not found")))
       serverProps = new ServerProperty(app.origin, app.host, challenge)
       authParams = new AuthenticationParameters(
@@ -170,9 +171,9 @@ class PasskeyVerificationServiceImpl(
         userVerificationRequired
       )
       verifiedAuthData <- Future.fromTry(Try(webAuthnManager.verify(authData, authParams)))
-      _ <- challengeRepo.deleteAuthenticationChallenge(userId)
-      _ <- passkeyRepo.updateAuthenticationCounter(userId, verifiedAuthData)
-      _ <- passkeyRepo.updateLastUsedTime(userId, verifiedAuthData)
+      _ <- challengeRepo.deleteAuthenticationChallenge(user.username)
+      _ <- passkeyRepo.updateAuthenticationCounter(user.username, verifiedAuthData)
+      _ <- passkeyRepo.updateLastUsedTime(user.username, verifiedAuthData)
     } yield verifiedAuthData
 
   private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor = {
