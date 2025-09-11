@@ -9,11 +9,11 @@ import scala.concurrent.Future
 
 trait PasskeyVerificationService {
 
-  def creationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions]
+  def buildCreationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions]
 
   def register(user: UserIdentity, creationResponse: JsValue): Future[CredentialRecord]
 
-  def authenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions]
+  def buildAuthenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions]
 
   def verify(user: UserIdentity, authenticationResponse: JsValue): Future[AuthenticationData]
 }

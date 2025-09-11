@@ -92,7 +92,7 @@ class PasskeyVerificationServiceImpl(
 
   private val transports: Option[Set[AuthenticatorTransport]] = None
 
-  def creationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions] =
+  def buildCreationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions] =
     for {
       passkeyIds <- passkeyRepo.loadPasskeyIds(user.username)
       challenge = generateChallenge()
@@ -137,7 +137,7 @@ class PasskeyVerificationServiceImpl(
     )
   }
 
-  def authenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions] =
+  def buildAuthenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions] =
     for {
       passkeyIds <- passkeyRepo.loadPasskeyIds(user.username)
       challenge = generateChallenge()

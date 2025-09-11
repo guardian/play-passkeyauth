@@ -28,7 +28,7 @@ class BasePasskeyController(
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-credential-key-pair]].
     */
   def creationOptions: Action[Unit] = authAction.async(parse.empty) { request =>
-    apiResponse(passkeyService.creationOptions(request.user))
+    apiResponse(passkeyService.buildCreationOptions(request.user))
   }
 
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#registering-the-webauthn-public-key-credential-on-the-server]].
@@ -40,7 +40,7 @@ class BasePasskeyController(
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-assertion]].
     */
   def authenticationOptions: Action[Unit] = authAction.async(parse.empty) { request =>
-    apiResponse(passkeyService.authenticationOptions(request.user))
+    apiResponse(passkeyService.buildAuthenticationOptions(request.user))
   }
 
   private def apiResponse[A](fa: => Future[A])(using writer: Writes[A]): Future[Result] =
