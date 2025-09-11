@@ -1,5 +1,7 @@
 package com.gu.playpasskeyauth
 
+import com.gu.googleauth.AuthAction
+import com.gu.playpasskeyauth.controllers.BasePasskeyController
 import com.gu.playpasskeyauth.filters.PasskeyVerificationFilter
 import com.gu.playpasskeyauth.models.HostApp
 import com.gu.playpasskeyauth.services.{
@@ -8,6 +10,8 @@ import com.gu.playpasskeyauth.services.{
   PasskeyVerificationService,
   PasskeyVerificationServiceImpl
 }
+import com.gu.playpasskeyauth.web.CreationDataRequest
+import play.api.mvc.{ActionBuilder, AnyContent, ControllerComponents}
 
 import scala.concurrent.ExecutionContext
 
@@ -22,4 +26,11 @@ class PasskeyAuth(
 
   def verificationFilter(using ExecutionContext): PasskeyVerificationFilter =
     new PasskeyVerificationFilter(verificationService)
+
+  def controller(
+      controllerComponents: ControllerComponents,
+      authAction: AuthAction[AnyContent],
+      userAndCreationDataAction: ActionBuilder[CreationDataRequest, AnyContent]
+  )(using ExecutionContext): BasePasskeyController =
+    new BasePasskeyController(controllerComponents, verificationService, authAction, userAndCreationDataAction)
 }
