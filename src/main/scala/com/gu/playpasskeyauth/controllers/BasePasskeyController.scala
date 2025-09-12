@@ -1,9 +1,9 @@
 package com.gu.playpasskeyauth.controllers
 
-import com.gu.googleauth.AuthAction
+import com.gu.googleauth.{AuthAction, UserIdentity}
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.web.{AuthenticationDataAction, CreationDataRequest}
+import com.gu.playpasskeyauth.web.CreationDataRequest
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -28,37 +28,47 @@ class BasePasskeyController(
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-credential-key-pair]].
     */
   def creationOptions: Action[Unit] = authAction.async(parse.empty) { request =>
-    apiResponse(passkeyService.buildCreationOptions(request.user))
+    apiResponse(
+      "creationOptions",
+      request.user,
+      passkeyService.buildCreationOptions(request.user)
+    )
   }
 
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#registering-the-webauthn-public-key-credential-on-the-server]].
     */
   def register: Action[AnyContent] = userAndCreationDataAction.async { request =>
-    apiResponse(passkeyService.register(request.user, request.creationData).map(_ => ()))
+    apiResponse(
+      "register",
+      request.user,
+      passkeyService.register(request.user, request.creationData).map(_ => ())
+    )
   }
 
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-assertion]].
     */
   def authenticationOptions: Action[Unit] = authAction.async(parse.empty) { request =>
-    apiResponse(passkeyService.buildAuthenticationOptions(request.user))
+    apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(request.user))
   }
 
-  private def apiResponse[A](fa: => Future[A])(using writer: Writes[A]): Future[Result] =
+  private def apiResponse[A](action: String, user: UserIdentity, fa: => Future[A])(using
+      writer: Writes[A]
+  ): Future[Result] =
     fa
       .map {
         case () =>
-          logger.info("Success")
+          logger.info(s"$action: ${user.username}: Success")
           NoContent
         case a =>
-          logger.info("Success")
+          logger.info(s"$action: ${user.username}: Success")
           Ok(writer.writes(a))
       }
       .recover {
         case e: IllegalArgumentException =>
-          logger.error(e.getMessage, e)
+          logger.error(s"$action: ${user.username}: Failure: ${e.getMessage}", e)
           BadRequest("Something went wrong")
         case e =>
-          logger.error(e.getMessage, e)
+          logger.error(s"$action: ${user.username}: Failure: ${e.getMessage}", e)
           InternalServerError("Something went wrong")
       }
 }
