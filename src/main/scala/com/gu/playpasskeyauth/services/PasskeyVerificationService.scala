@@ -11,7 +11,7 @@ trait PasskeyVerificationService {
 
   def buildCreationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions]
 
-  def register(user: UserIdentity, creationResponse: JsValue): Future[CredentialRecord]
+  def register(user: UserIdentity, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
 
   def buildAuthenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions]
 

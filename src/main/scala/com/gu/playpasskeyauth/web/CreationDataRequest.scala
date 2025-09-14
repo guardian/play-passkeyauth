@@ -10,6 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 // TODO: rename as it contains creation data rather than request for data
 class CreationDataRequest[A](
+    val passkeyName: String,
     val creationData: JsValue,
     request: UserIdentityRequest[A]
 ) extends WrappedRequest[A](request) {
@@ -20,12 +21,17 @@ trait CreationDataExtractor {
   def findCreationData[A](request: UserIdentityRequest[A]): Option[JsValue]
 }
 
-class CreationDataAction(extractor: CreationDataExtractor)(using val executionContext: ExecutionContext)
-    extends ActionRefiner[UserIdentityRequest, CreationDataRequest] {
+trait PasskeyNameExtractor {
+  def findPasskeyName[A](request: UserIdentityRequest[A]): Option[String]
+}
+
+class CreationDataAction(creationDataExtractor: CreationDataExtractor, passkeyNameExtractor: PasskeyNameExtractor)(using
+    val executionContext: ExecutionContext
+) extends ActionRefiner[UserIdentityRequest, CreationDataRequest] {
 
   protected def refine[A](request: UserIdentityRequest[A]): Future[Either[Result, CreationDataRequest[A]]] =
-    extractor.findCreationData(request) match {
-      case Some(jsValue) => Future.successful(Right(new CreationDataRequest(jsValue, request)))
-      case None          => Future.successful(Left(BadRequest("Expected creation data")))
+    (passkeyNameExtractor.findPasskeyName(request), creationDataExtractor.findCreationData(request)) match {
+      case (Some(name), Some(jsValue)) => Future.successful(Right(new CreationDataRequest(name, jsValue, request)))
+      case _                           => Future.successful(Left(BadRequest("Expected creation data")))
     }
 }

@@ -8,13 +8,13 @@ import scala.concurrent.Future
 
 trait PasskeyChallengeRepository {
 
-  def loadRegistrationChallenge(userId: String): Future[Option[Challenge]]
+  def loadRegistrationChallenge(userId: String): Future[Challenge]
 
   def insertRegistrationChallenge(userId: String, challenge: Challenge): Future[Unit]
 
   def deleteRegistrationChallenge(userId: String): Future[Unit]
 
-  def loadAuthenticationChallenge(userId: String): Future[Option[Challenge]]
+  def loadAuthenticationChallenge(userId: String): Future[Challenge]
 
   def insertAuthenticationChallenge(userId: String, challenge: Challenge): Future[Unit]
 

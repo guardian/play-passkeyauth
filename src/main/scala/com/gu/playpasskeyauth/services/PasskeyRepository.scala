@@ -11,6 +11,8 @@ trait PasskeyRepository {
 
   def loadPasskeyIds(userId: String): Future[List[String]]
 
+  def insertCredentialRecord(userId: String, passkeyName: String, credentialRecord: CredentialRecord): Future[Unit]
+
   def updateAuthenticationCounter(userId: String, authData: AuthenticationData): Future[Unit]
 
   def updateLastUsedTime(userId: String, authData: AuthenticationData): Future[Unit]

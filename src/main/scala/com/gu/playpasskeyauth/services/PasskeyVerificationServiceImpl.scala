@@ -114,28 +114,34 @@ class PasskeyVerificationServiceImpl(
       )
     }
 
-  // TODO: challenge management and record in DB
-  override def register(user: UserIdentity, creationResponse: JsValue): Future[CredentialRecord] = {
-    val challenge = generateChallenge()
-    val regParams = new RegistrationParameters(
-      new ServerProperty(
-        app.origin,
-        app.host,
-        challenge
-      ),
-      publicKeyCredentialParameters.asJava,
-      userVerificationRequired
-    )
-    val verified = webAuthnManager.verifyRegistrationResponseJSON(creationResponse.toString, regParams)
-    Future.successful(
-      new CredentialRecordImpl(
+  override def register(
+      user: UserIdentity,
+      passkeyName: String,
+      creationResponse: JsValue
+  ): Future[CredentialRecord] =
+    for {
+      challenge <- challengeRepo.loadRegistrationChallenge(user.username)
+      verified <- Future.fromTry(
+        Try(
+          webAuthnManager.verifyRegistrationResponseJSON(
+            creationResponse.toString,
+            new RegistrationParameters(
+              new ServerProperty(app.origin, app.host, challenge),
+              publicKeyCredentialParameters.asJava,
+              userVerificationRequired
+            )
+          )
+        )
+      )
+      credentialRecord = new CredentialRecordImpl(
         verified.getAttestationObject,
         verified.getCollectedClientData,
         verified.getClientExtensions,
         verified.getTransports
       )
-    )
-  }
+      _ <- passkeyRepo.insertCredentialRecord(user.username, passkeyName, credentialRecord)
+      _ <- challengeRepo.deleteRegistrationChallenge(user.username)
+    } yield credentialRecord
 
   def buildAuthenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions] =
     for {
@@ -158,19 +164,23 @@ class PasskeyVerificationServiceImpl(
 
   def verify(user: UserIdentity, authenticationResponse: JsValue): Future[AuthenticationData] =
     for {
-      optChallenge <- challengeRepo.loadAuthenticationChallenge(user.username)
-      challenge <- optChallenge.toFutureOr(Future.failed(new RuntimeException("Challenge not found")))
+      challenge <- challengeRepo.loadAuthenticationChallenge(user.username)
       authData <- Future.fromTry(Try(webAuthnManager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
       optPasskey <- passkeyRepo.loadCredentialRecord(user.username, authData.getCredentialId)
       passkey <- optPasskey.toFutureOr(Future.failed(new RuntimeException("Passkey not found")))
-      serverProps = new ServerProperty(app.origin, app.host, challenge)
-      authParams = new AuthenticationParameters(
-        serverProps,
-        passkey,
-        List(authData.getCredentialId).asJava,
-        userVerificationRequired
+      verifiedAuthData <- Future.fromTry(
+        Try(
+          webAuthnManager.verify(
+            authData,
+            new AuthenticationParameters(
+              new ServerProperty(app.origin, app.host, challenge),
+              passkey,
+              List(authData.getCredentialId).asJava,
+              userVerificationRequired
+            )
+          )
+        )
       )
-      verifiedAuthData <- Future.fromTry(Try(webAuthnManager.verify(authData, authParams)))
       _ <- challengeRepo.deleteAuthenticationChallenge(user.username)
       _ <- passkeyRepo.updateAuthenticationCounter(user.username, verifiedAuthData)
       _ <- passkeyRepo.updateLastUsedTime(user.username, verifiedAuthData)

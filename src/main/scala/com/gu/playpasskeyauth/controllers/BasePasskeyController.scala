@@ -41,7 +41,7 @@ class BasePasskeyController(
     apiResponse(
       "register",
       request.user,
-      passkeyService.register(request.user, request.creationData).map(_ => ())
+      passkeyService.register(request.user, request.passkeyName, request.creationData).map(_ => ())
     )
   }
 
