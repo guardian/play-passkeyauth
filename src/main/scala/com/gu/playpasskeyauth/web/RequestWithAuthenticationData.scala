@@ -8,8 +8,7 @@ import play.api.mvc.Results.BadRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
-// TODO: rename as it contains auth data rather than request for data
-class AuthenticationDataRequest[A](
+class RequestWithAuthenticationData[A](
     val authenticationData: JsValue,
     request: UserIdentityRequest[A]
 ) extends WrappedRequest[A](request) {
@@ -21,11 +20,11 @@ trait AuthenticationDataExtractor {
 }
 
 class AuthenticationDataAction(extractor: AuthenticationDataExtractor)(using val executionContext: ExecutionContext)
-    extends ActionRefiner[UserIdentityRequest, AuthenticationDataRequest] {
+    extends ActionRefiner[UserIdentityRequest, RequestWithAuthenticationData] {
 
-  protected def refine[A](request: UserIdentityRequest[A]): Future[Either[Result, AuthenticationDataRequest[A]]] =
+  protected def refine[A](request: UserIdentityRequest[A]): Future[Either[Result, RequestWithAuthenticationData[A]]] =
     extractor.findAuthenticationData(request) match {
-      case Some(jsValue) => Future.successful(Right(new AuthenticationDataRequest(jsValue, request)))
+      case Some(jsValue) => Future.successful(Right(new RequestWithAuthenticationData(jsValue, request)))
       case None          => Future.successful(Left(BadRequest("Expected creation data")))
     }
 }

@@ -10,7 +10,7 @@ import com.gu.playpasskeyauth.services.{
   PasskeyVerificationService,
   PasskeyVerificationServiceImpl
 }
-import com.gu.playpasskeyauth.web.CreationDataRequest
+import com.gu.playpasskeyauth.web.RequestWithCreationData
 import play.api.mvc.{ActionBuilder, AnyContent, ControllerComponents}
 
 import scala.concurrent.ExecutionContext
@@ -30,7 +30,7 @@ class PasskeyAuth(
   def controller(
       controllerComponents: ControllerComponents,
       authAction: AuthAction[AnyContent],
-      userAndCreationDataAction: ActionBuilder[CreationDataRequest, AnyContent]
+      userAndCreationDataAction: ActionBuilder[RequestWithCreationData, AnyContent]
   )(using ExecutionContext): BasePasskeyController =
     new BasePasskeyController(controllerComponents, verificationService, authAction, userAndCreationDataAction)
 }

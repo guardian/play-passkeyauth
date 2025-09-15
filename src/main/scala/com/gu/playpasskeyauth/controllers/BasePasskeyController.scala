@@ -3,7 +3,7 @@ package com.gu.playpasskeyauth.controllers
 import com.gu.googleauth.{AuthAction, UserIdentity}
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.web.CreationDataRequest
+import com.gu.playpasskeyauth.web.RequestWithCreationData
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -16,7 +16,7 @@ class BasePasskeyController(
     controllerComponents: ControllerComponents,
     passkeyService: PasskeyVerificationService,
     authAction: AuthAction[AnyContent],
-    userAndCreationDataAction: ActionBuilder[CreationDataRequest, AnyContent]
+    userAndCreationDataAction: ActionBuilder[RequestWithCreationData, AnyContent]
 )(using val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {

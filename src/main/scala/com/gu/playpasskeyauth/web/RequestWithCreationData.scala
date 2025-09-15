@@ -8,8 +8,7 @@ import play.api.mvc.Results.BadRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
-// TODO: rename as it contains creation data rather than request for data
-class CreationDataRequest[A](
+class RequestWithCreationData[A](
     val passkeyName: String,
     val creationData: JsValue,
     request: UserIdentityRequest[A]
@@ -27,11 +26,11 @@ trait PasskeyNameExtractor {
 
 class CreationDataAction(creationDataExtractor: CreationDataExtractor, passkeyNameExtractor: PasskeyNameExtractor)(using
     val executionContext: ExecutionContext
-) extends ActionRefiner[UserIdentityRequest, CreationDataRequest] {
+) extends ActionRefiner[UserIdentityRequest, RequestWithCreationData] {
 
-  protected def refine[A](request: UserIdentityRequest[A]): Future[Either[Result, CreationDataRequest[A]]] =
+  protected def refine[A](request: UserIdentityRequest[A]): Future[Either[Result, RequestWithCreationData[A]]] =
     (passkeyNameExtractor.findPasskeyName(request), creationDataExtractor.findCreationData(request)) match {
-      case (Some(name), Some(jsValue)) => Future.successful(Right(new CreationDataRequest(name, jsValue, request)))
+      case (Some(name), Some(jsValue)) => Future.successful(Right(new RequestWithCreationData(name, jsValue, request)))
       case _                           => Future.successful(Left(BadRequest("Expected creation data")))
     }
 }

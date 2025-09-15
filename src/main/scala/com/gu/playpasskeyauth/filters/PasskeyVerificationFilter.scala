@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.filters
 
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.web.AuthenticationDataRequest
+import com.gu.playpasskeyauth.web.RequestWithAuthenticationData
 import com.webauthn4j.data.AuthenticationData
 import play.api.Logging
 import play.api.mvc.Results.{BadRequest, InternalServerError}
@@ -15,10 +15,10 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class PasskeyVerificationFilter(verifier: PasskeyVerificationService)(using
     val executionContext: ExecutionContext
-) extends ActionFilter[AuthenticationDataRequest]
+) extends ActionFilter[RequestWithAuthenticationData]
     with Logging {
 
-  def filter[A](request: AuthenticationDataRequest[A]): Future[Option[Result]] =
+  def filter[A](request: RequestWithAuthenticationData[A]): Future[Option[Result]] =
     apiResponse(verifier.verify(request.user, request.authenticationData))
 
   private def apiResponse(auth: => Future[AuthenticationData]): Future[Option[Result]] =
