@@ -1,9 +1,7 @@
 package com.gu.playpasskeyauth.filters
 
-import com.gu.googleauth.AuthAction.UserIdentityRequest
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.utilities.Utilities.*
-import com.gu.playpasskeyauth.web.{AuthenticationDataExtractor, AuthenticationDataRequest}
+import com.gu.playpasskeyauth.web.AuthenticationDataRequest
 import com.webauthn4j.data.AuthenticationData
 import play.api.Logging
 import play.api.mvc.Results.{BadRequest, InternalServerError}

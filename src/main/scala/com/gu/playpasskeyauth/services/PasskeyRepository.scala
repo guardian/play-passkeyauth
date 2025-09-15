@@ -7,7 +7,7 @@ import scala.concurrent.Future
 
 trait PasskeyRepository {
 
-  def loadCredentialRecord(userId: String, passkeyId: Array[Byte]): Future[Option[CredentialRecord]]
+  def loadCredentialRecord(userId: String, passkeyId: Array[Byte]): Future[CredentialRecord]
 
   def loadPasskeyIds(userId: String): Future[List[String]]
 

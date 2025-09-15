@@ -2,7 +2,6 @@ package com.gu.playpasskeyauth.services
 
 import com.gu.googleauth.UserIdentity
 import com.gu.playpasskeyauth.models.HostApp
-import com.gu.playpasskeyauth.utilities.Utilities.*
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
@@ -166,15 +165,14 @@ class PasskeyVerificationServiceImpl(
     for {
       challenge <- challengeRepo.loadAuthenticationChallenge(user.username)
       authData <- Future.fromTry(Try(webAuthnManager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
-      optPasskey <- passkeyRepo.loadCredentialRecord(user.username, authData.getCredentialId)
-      passkey <- optPasskey.toFutureOr(Future.failed(new RuntimeException("Passkey not found")))
+      credentialRecord <- passkeyRepo.loadCredentialRecord(user.username, authData.getCredentialId)
       verifiedAuthData <- Future.fromTry(
         Try(
           webAuthnManager.verify(
             authData,
             new AuthenticationParameters(
               new ServerProperty(app.origin, app.host, challenge),
-              passkey,
+              credentialRecord,
               List(authData.getCredentialId).asJava,
               userVerificationRequired
             )
