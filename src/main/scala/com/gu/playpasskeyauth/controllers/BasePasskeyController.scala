@@ -3,7 +3,7 @@ package com.gu.playpasskeyauth.controllers
 import com.gu.googleauth.{AuthAction, UserIdentity}
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.web.{CreationDataAction, CreationDataExtractor, PasskeyNameExtractor}
+import com.gu.playpasskeyauth.web.RequestWithCreationData
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -16,15 +16,11 @@ class BasePasskeyController(
     controllerComponents: ControllerComponents,
     passkeyService: PasskeyVerificationService,
     authAction: AuthAction[AnyContent],
-    creationDataExtractor: CreationDataExtractor,
-    passkeyNameExtractor: PasskeyNameExtractor,
+    userAndCreationDataAction: ActionBuilder[RequestWithCreationData, AnyContent],
     registrationRedirect: Call
 )(using val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
-
-  private val creationDataAction = new CreationDataAction(creationDataExtractor, passkeyNameExtractor)
-  private val userAndCreationDataAction = authAction.andThen(creationDataAction)
 
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-credential-key-pair]].
     */

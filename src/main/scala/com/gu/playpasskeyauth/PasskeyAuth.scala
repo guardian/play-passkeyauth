@@ -10,35 +10,42 @@ import com.gu.playpasskeyauth.services.{
   PasskeyVerificationService,
   PasskeyVerificationServiceImpl
 }
-import com.gu.playpasskeyauth.web.{CreationDataExtractor, PasskeyNameExtractor, RequestWithCreationData}
+import com.gu.playpasskeyauth.web.*
 import play.api.mvc.{ActionBuilder, AnyContent, Call, ControllerComponents}
 
 import scala.concurrent.ExecutionContext
 
 class PasskeyAuth(
     app: HostApp,
+    authAction: AuthAction[AnyContent],
     passkeyRepo: PasskeyRepository,
-    challengeRepo: PasskeyChallengeRepository,
-    creationDataExtractor: CreationDataExtractor,
-    passkeyNameExtractor: PasskeyNameExtractor,
-    registrationRedirect: Call
+    challengeRepo: PasskeyChallengeRepository
 ) {
   private val verificationService: PasskeyVerificationService =
     new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo)
 
-  def verificationFilter(using ExecutionContext): PasskeyVerificationFilter =
-    new PasskeyVerificationFilter(verificationService)
+  def verificationAction(
+      authenticationDataExtractor: AuthenticationDataExtractor
+  )(using ExecutionContext): ActionBuilder[RequestWithAuthenticationData, AnyContent] = {
+    val authDataAction = new AuthenticationDataAction(authenticationDataExtractor)
+    val verificationFilter = new PasskeyVerificationFilter(verificationService)
+    authAction.andThen(authDataAction).andThen(verificationFilter)
+  }
 
   def controller(
       controllerComponents: ControllerComponents,
-      authAction: AuthAction[AnyContent]
-  )(using ExecutionContext): BasePasskeyController =
+      creationDataExtractor: CreationDataExtractor,
+      passkeyNameExtractor: PasskeyNameExtractor,
+      registrationRedirect: Call
+  )(using ExecutionContext): BasePasskeyController = {
+    val creationDataAction = new CreationDataAction(creationDataExtractor, passkeyNameExtractor)
+    val userAndCreationDataAction = authAction.andThen(creationDataAction)
     new BasePasskeyController(
       controllerComponents,
       verificationService,
       authAction,
-      creationDataExtractor,
-      passkeyNameExtractor,
+      userAndCreationDataAction,
       registrationRedirect
     )
+  }
 }
