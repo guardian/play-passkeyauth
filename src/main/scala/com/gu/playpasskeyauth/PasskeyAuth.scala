@@ -10,7 +10,7 @@ import com.gu.playpasskeyauth.services.{
   PasskeyVerificationService,
   PasskeyVerificationServiceImpl
 }
-import com.gu.playpasskeyauth.web.RequestWithCreationData
+import com.gu.playpasskeyauth.web.{CreationDataExtractor, PasskeyNameExtractor, RequestWithCreationData}
 import play.api.mvc.{ActionBuilder, AnyContent, ControllerComponents}
 
 import scala.concurrent.ExecutionContext
@@ -18,9 +18,11 @@ import scala.concurrent.ExecutionContext
 class PasskeyAuth(
     app: HostApp,
     passkeyRepo: PasskeyRepository,
-    challengeRepo: PasskeyChallengeRepository
+    challengeRepo: PasskeyChallengeRepository,
+    creationDataExtractor: CreationDataExtractor,
+    passkeyNameExtractor: PasskeyNameExtractor,
+    registrationRedirectUrl: String
 ) {
-
   private val verificationService: PasskeyVerificationService =
     new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo)
 
@@ -32,5 +34,12 @@ class PasskeyAuth(
       authAction: AuthAction[AnyContent],
       userAndCreationDataAction: ActionBuilder[RequestWithCreationData, AnyContent]
   )(using ExecutionContext): BasePasskeyController =
-    new BasePasskeyController(controllerComponents, verificationService, authAction, userAndCreationDataAction)
+    new BasePasskeyController(
+      controllerComponents,
+      verificationService,
+      authAction,
+      creationDataExtractor,
+      passkeyNameExtractor,
+      registrationRedirectUrl
+    )
 }
