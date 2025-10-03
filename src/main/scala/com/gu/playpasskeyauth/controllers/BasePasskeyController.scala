@@ -3,12 +3,7 @@ package com.gu.playpasskeyauth.controllers
 import com.gu.googleauth.{AuthAction, UserIdentity}
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.web.{
-  CreationDataAction,
-  CreationDataExtractor,
-  PasskeyNameExtractor,
-  RequestWithCreationData
-}
+import com.gu.playpasskeyauth.web.{CreationDataAction, CreationDataExtractor, PasskeyNameExtractor}
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -23,7 +18,7 @@ class BasePasskeyController(
     authAction: AuthAction[AnyContent],
     creationDataExtractor: CreationDataExtractor,
     passkeyNameExtractor: PasskeyNameExtractor,
-    registrationRedirectUrl: String
+    registrationRedirect: Call
 )(using val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
@@ -47,7 +42,7 @@ class BasePasskeyController(
     apiRedirectResponse(
       "register",
       request.user,
-      registrationRedirectUrl,
+      registrationRedirect,
       passkeyService.register(request.user, request.passkeyName, request.creationData).map(_ => ())
     )
   }
@@ -78,7 +73,7 @@ class BasePasskeyController(
   private def apiRedirectResponse[A](
       action: String,
       user: UserIdentity,
-      redirectUrl: String,
+      redirect: Call,
       fa: => Future[A]
   ): Future[Result] = {
     apiResponse(
@@ -86,7 +81,7 @@ class BasePasskeyController(
       user,
       fa.map { _ =>
         logger.info(s"$action: ${user.username}: Success")
-        SeeOther(redirectUrl)
+        Redirect(redirect)
       }
     )
   }
