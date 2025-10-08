@@ -15,5 +15,9 @@ trait PasskeyVerificationService {
 
   def buildAuthenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions]
 
+  /** Verifies the given authentication response with the data stored by the relying party. Also updates the stored data
+    * to keep it current. The signature counter and the last used timestamp will be updated following successful
+    * verification.
+    */
   def verify(user: UserIdentity, authenticationResponse: JsValue): Future[AuthenticationData]
 }
