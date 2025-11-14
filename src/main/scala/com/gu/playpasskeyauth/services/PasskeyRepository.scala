@@ -16,4 +16,6 @@ trait PasskeyRepository {
   def updateAuthenticationCounter(userId: String, authData: AuthenticationData): Future[Unit]
 
   def updateLastUsedTime(userId: String, authData: AuthenticationData): Future[Unit]
+
+  def deleteCredentialRecord(userId: String, passkeyId: String): Future[String]
 }

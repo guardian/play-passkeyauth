@@ -35,16 +35,22 @@ class PasskeyAuth(
   def controller(
       controllerComponents: ControllerComponents,
       creationDataExtractor: CreationDataExtractor,
+      authenticationDataExtractor: AuthenticationDataExtractor,
       passkeyNameExtractor: PasskeyNameExtractor,
       registrationRedirect: Call
   )(using ExecutionContext): BasePasskeyController = {
+    val verificationFilter = new PasskeyVerificationFilter(verificationService)
     val creationDataAction = new CreationDataAction(creationDataExtractor, passkeyNameExtractor)
+    val authDataAction = new AuthenticationDataAction(authenticationDataExtractor)
     val userAndCreationDataAction = authAction.andThen(creationDataAction)
+    val userAndDeletionDataAction =
+      authAction.andThen(authDataAction).andThen(verificationFilter)
     new BasePasskeyController(
       controllerComponents,
       verificationService,
       authAction,
       userAndCreationDataAction,
+      userAndDeletionDataAction,
       registrationRedirect
     )
   }

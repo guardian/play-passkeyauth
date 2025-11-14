@@ -25,7 +25,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
-class PasskeyVerificationServiceImpl(
+private[playpasskeyauth] class PasskeyVerificationServiceImpl(
     app: HostApp,
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
@@ -80,6 +80,7 @@ class PasskeyVerificationServiceImpl(
 
   private val credType = PUBLIC_KEY
 
+  // TODO why is this hardcoded?
   private val transports: Option[Set[AuthenticatorTransport]] = None
 
   def buildCreationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions] =
@@ -104,7 +105,7 @@ class PasskeyVerificationServiceImpl(
       )
     }
 
-  override def register(
+  def register(
       user: UserIdentity,
       passkeyName: String,
       creationResponse: JsValue
@@ -116,7 +117,7 @@ class PasskeyVerificationServiceImpl(
           webAuthnManager.verifyRegistrationResponseJSON(
             creationResponse.toString,
             new RegistrationParameters(
-              new ServerProperty(app.origin, app.host, challenge),
+              ServerProperty.builder.origin(app.origin).rpId(app.host).challenge(challenge).build(),
               publicKeyCredentialParameters.asJava,
               userVerificationRequired
             )
@@ -162,7 +163,7 @@ class PasskeyVerificationServiceImpl(
           webAuthnManager.verify(
             authData,
             new AuthenticationParameters(
-              new ServerProperty(app.origin, app.host, challenge),
+              ServerProperty.builder.origin(app.origin).rpId(app.host).challenge(challenge).build(),
               credentialRecord,
               List(authData.getCredentialId).asJava,
               userVerificationRequired
@@ -174,6 +175,9 @@ class PasskeyVerificationServiceImpl(
       _ <- passkeyRepo.updateAuthenticationCounter(user.username, verifiedAuthData)
       _ <- passkeyRepo.updateLastUsedTime(user.username, verifiedAuthData)
     } yield verifiedAuthData
+
+  def delete(user: UserIdentity, passkeyId: String): Future[String] =
+    passkeyRepo.deleteCredentialRecord(user.username, passkeyId)
 
   private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor = {
     val id = Base64UrlUtil.decode(passkeyId)
