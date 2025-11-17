@@ -7,7 +7,7 @@ val playVersion = "3.0.9"
  * 3. If no earlier version appears in the dependency list, the entry can be removed.
  */
 val safeTransitiveDependencies = Seq(
-  "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.0" % Runtime
+  "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.1" % Runtime
 )
 
 lazy val root = project
