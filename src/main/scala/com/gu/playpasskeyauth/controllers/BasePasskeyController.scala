@@ -7,7 +7,6 @@ import com.gu.playpasskeyauth.web.{RequestWithAuthenticationData, RequestWithCre
 import play.api.Logging
 import play.api.libs.json.{Json, Writes}
 import play.api.mvc.*
-import play.api.mvc.Results.InternalServerError
 
 import scala.concurrent.{ExecutionContext, Future}
 
