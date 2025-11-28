@@ -173,7 +173,11 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
         )
       )
       _ <- challengeRepo.deleteAuthenticationChallenge(user.username)
-      _ <- passkeyRepo.updateAuthenticationCount(user.username, verifiedAuthData.getAuthenticatorData.getSignCount)
+      _ <- passkeyRepo.updateAuthenticationCount(
+        user.username,
+        verifiedAuthData.getCredentialId,
+        verifiedAuthData.getAuthenticatorData.getSignCount
+      )
       _ <- passkeyRepo.updateLastUsedTime(user.username, verifiedAuthData.getCredentialId, Instant.now())
     } yield verifiedAuthData
 

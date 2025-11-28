@@ -48,12 +48,14 @@ trait PasskeyRepository {
     *
     * @param userId
     *   Implementation-specific ID of owning user
+    * @param passkeyId
+    *   Webauthn ID of corresponding passkey
     * @param signCount
     *   New value to store
     * @return
     *   Indication of success
     */
-  def updateAuthenticationCount(userId: String, signCount: Long): Future[Unit]
+  def updateAuthenticationCount(userId: String, passkeyId: Array[Byte], signCount: Long): Future[Unit]
 
   /** Records the timestamp when a passkey was last used for authentication. Useful for tracking activity and managing
     * unused credentials.
