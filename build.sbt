@@ -1,3 +1,6 @@
+import ReleaseTransformations.*
+import sbtversionpolicy.withsbtrelease.ReleaseVersion
+
 val playVersion = "3.0.9"
 
 /*
@@ -16,16 +19,31 @@ lazy val root = project
     licenses := Seq(License.Apache2),
     organization := "com.gu",
     name := "play-passkeyauth",
-    version := "0.1.0-SNAPSHOT",
     scalaVersion := "3.3.7",
-    scalacOptions ++= Seq("-deprecation", "-explain", "-Werror"),
+    scalacOptions ++= Seq(
+      "-deprecation",
+      "-explain",
+      "-release:11",
+      "-Werror"
+    ),
     scalafmtOnCompile := true,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play" % playVersion,
       "com.webauthn4j" % "webauthn4j-core" % "0.30.0.RELEASE",
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
-      // TODO remove
-      "com.gu.play-googleauth" %% "play-v30" % "29.0.0"
-    ) ++ safeTransitiveDependencies
+      "com.gu.play-googleauth" %% "play-v30" % "29.1.0"
+    ) ++ safeTransitiveDependencies,
+    releaseVersion := ReleaseVersion.fromAggregatedAssessedCompatibilityWithLatestRelease().value,
+    releaseProcess := Seq[ReleaseStep](
+      checkSnapshotDependencies,
+      inquireVersions,
+      runClean,
+      runTest,
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      setNextVersion,
+      commitNextVersion
+    )
   )
