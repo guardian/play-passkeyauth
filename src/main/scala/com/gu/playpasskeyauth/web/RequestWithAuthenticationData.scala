@@ -15,6 +15,10 @@ class RequestWithAuthenticationData[A](
   def user: UserIdentity = request.user
 }
 
+/** There are any number of ways to find authentication data in a request so this is left to the implementer of this
+  * trait to decide. This authentication data is the json that's returned by a `navigator.credentials.get` call in a
+  * browser. It's optional in case the request doesn't actually contain the data.
+  */
 trait AuthenticationDataExtractor {
   def findAuthenticationData[A](request: UserIdentityRequest[A]): Option[JsValue]
 }
