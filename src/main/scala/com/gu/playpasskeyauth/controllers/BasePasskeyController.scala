@@ -5,7 +5,7 @@ import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
 import com.gu.playpasskeyauth.web.{RequestWithAuthenticationData, RequestWithCreationData}
 import play.api.Logging
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.Writes
 import play.api.mvc.*
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,22 +47,6 @@ class BasePasskeyController(
     */
   def authenticationOptions: Action[Unit] = authAction.async(parse.empty) { request =>
     apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(request.user))
-  }
-
-  def delete(passkeyId: String): Action[AnyContent] = userAndDeletionDataAction.async { request =>
-    apiResponse(
-      "delete",
-      request.user,
-      passkeyService
-        .delete(request.user, passkeyId)
-        .map(passkeyName =>
-          Json.obj(
-            "success" -> true,
-            "message" -> s"Passkey '$passkeyName' was successfully deleted",
-            "redirect" -> registrationRedirect.url
-          )
-        )
-    )
   }
 
   private def apiResponse[A](action: String, user: UserIdentity, fa: => Future[A])(using
