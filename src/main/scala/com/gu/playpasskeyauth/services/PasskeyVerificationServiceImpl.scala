@@ -19,6 +19,7 @@ import com.webauthn4j.util.Base64UrlUtil
 import play.api.libs.json.JsValue
 
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.{Duration, SECONDS}
@@ -130,7 +131,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
         verified.getClientExtensions,
         verified.getTransports
       )
-      _ <- passkeyRepo.insertCredentialRecord(user.username, passkeyName, credentialRecord)
+      _ <- passkeyRepo.insertPasskey(user.username, passkeyName, credentialRecord)
       _ <- challengeRepo.deleteRegistrationChallenge(user.username)
     } yield credentialRecord
 
@@ -157,7 +158,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
     for {
       challenge <- challengeRepo.loadAuthenticationChallenge(user.username)
       authData <- Future.fromTry(Try(webAuthnManager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
-      credentialRecord <- passkeyRepo.loadCredentialRecord(user.username, authData.getCredentialId)
+      credentialRecord <- passkeyRepo.loadPasskey(user.username, authData.getCredentialId)
       verifiedAuthData <- Future.fromTry(
         Try(
           webAuthnManager.verify(
@@ -172,12 +173,9 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
         )
       )
       _ <- challengeRepo.deleteAuthenticationChallenge(user.username)
-      _ <- passkeyRepo.updateAuthenticationCounter(user.username, verifiedAuthData)
-      _ <- passkeyRepo.updateLastUsedTime(user.username, verifiedAuthData)
+      _ <- passkeyRepo.updateAuthenticationCount(user.username, verifiedAuthData.getAuthenticatorData.getSignCount)
+      _ <- passkeyRepo.updateLastUsedTime(user.username, verifiedAuthData.getCredentialId, Instant.now())
     } yield verifiedAuthData
-
-  def delete(user: UserIdentity, passkeyId: String): Future[String] =
-    passkeyRepo.deleteCredentialRecord(user.username, passkeyId)
 
   private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor = {
     val id = Base64UrlUtil.decode(passkeyId)

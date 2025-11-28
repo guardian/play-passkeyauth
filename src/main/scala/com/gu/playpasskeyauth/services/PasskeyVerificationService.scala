@@ -20,6 +20,4 @@ trait PasskeyVerificationService {
     * verification.
     */
   def verify(user: UserIdentity, authenticationResponse: JsValue): Future[AuthenticationData]
-
-  def delete(user: UserIdentity, passkeyId: String): Future[String]
 }
