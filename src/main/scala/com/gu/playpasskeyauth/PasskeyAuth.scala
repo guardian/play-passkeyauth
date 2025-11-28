@@ -16,29 +16,26 @@ import play.api.mvc.{ActionBuilder, AnyContent, Call, ControllerComponents}
 import scala.concurrent.ExecutionContext
 
 class PasskeyAuth(
+    controllerComponents: ControllerComponents,
     app: HostApp,
     authAction: AuthAction[AnyContent],
     passkeyRepo: PasskeyRepository,
-    challengeRepo: PasskeyChallengeRepository
-) {
+    challengeRepo: PasskeyChallengeRepository,
+    creationDataExtractor: CreationDataExtractor,
+    authenticationDataExtractor: AuthenticationDataExtractor,
+    passkeyNameExtractor: PasskeyNameExtractor,
+    registrationRedirect: Call
+)(using ExecutionContext) {
   private val verificationService: PasskeyVerificationService =
     new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo)
 
-  def verificationAction(
-      authenticationDataExtractor: AuthenticationDataExtractor
-  )(using ExecutionContext): ActionBuilder[RequestWithAuthenticationData, AnyContent] = {
+  def verificationAction(): ActionBuilder[RequestWithAuthenticationData, AnyContent] = {
     val authDataAction = new AuthenticationDataAction(authenticationDataExtractor)
     val verificationFilter = new PasskeyVerificationFilter(verificationService)
     authAction.andThen(authDataAction).andThen(verificationFilter)
   }
 
-  def controller(
-      controllerComponents: ControllerComponents,
-      creationDataExtractor: CreationDataExtractor,
-      authenticationDataExtractor: AuthenticationDataExtractor,
-      passkeyNameExtractor: PasskeyNameExtractor,
-      registrationRedirect: Call
-  )(using ExecutionContext): BasePasskeyController = {
+  def controller(): BasePasskeyController = {
     val verificationFilter = new PasskeyVerificationFilter(verificationService)
     val creationDataAction = new CreationDataAction(creationDataExtractor, passkeyNameExtractor)
     val authDataAction = new AuthenticationDataAction(authenticationDataExtractor)
