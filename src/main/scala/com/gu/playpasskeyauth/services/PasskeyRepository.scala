@@ -5,8 +5,7 @@ import com.webauthn4j.credential.CredentialRecord
 import java.time.Instant
 import scala.concurrent.Future
 
-/** The implementation of this trait determines how passkeys are stored on the relying party.
-  */
+/** The implementation of this trait determines how passkeys are stored on the relying party. */
 trait PasskeyRepository {
 
   /** Loads a single credential record corresponding to a passkey. Needed to verify an authentication attempt.
