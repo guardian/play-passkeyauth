@@ -22,7 +22,7 @@ lazy val root = project
     scalafmtOnCompile := true,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play" % playVersion,
-      "com.webauthn4j" % "webauthn4j-core" % "0.30.0.RELEASE",
+      "com.webauthn4j" % "webauthn4j-core" % "0.30.1.RELEASE",
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
       // TODO remove
