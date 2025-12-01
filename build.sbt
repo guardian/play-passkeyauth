@@ -26,6 +26,6 @@ lazy val root = project
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
       // TODO remove
-      "com.gu.play-googleauth" %% "play-v30" % "29.0.0"
+      "com.gu.play-googleauth" %% "play-v30" % "29.1.0"
     ) ++ safeTransitiveDependencies
   )
