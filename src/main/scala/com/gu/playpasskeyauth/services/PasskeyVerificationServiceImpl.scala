@@ -112,6 +112,16 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
       creationResponse: JsValue
   ): Future[CredentialRecord] =
     for {
+      // There's a potential race condition here if another request conflicts with it so would be better at DB level - but leaving it here for now
+      _ <- passkeyRepo
+        .loadPasskeyNames(user.username)
+        .flatMap(names => {
+          if (names.contains(passkeyName)) {
+            Future.failed(new IllegalArgumentException(s"A passkey with the name '$passkeyName' already exists."))
+          } else {
+            Future.successful(())
+          }
+        })
       challenge <- challengeRepo.loadRegistrationChallenge(user.username)
       verified <- Future.fromTry(
         Try(

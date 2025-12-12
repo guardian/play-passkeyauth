@@ -23,11 +23,20 @@ trait PasskeyRepository {
     * authentication.
     *
     * @param userId
-    *   Implementation-specificID of owning user
+    *   Implementation-specific ID of owning user
     * @return
     *   List of webauthn passkey IDs
     */
   def loadPasskeyIds(userId: String): Future[List[String]]
+
+  /** Loads names of all passkeys belonging to a given user. Needed to ensure a registered passkey has a unique name.
+    *
+    * @param userId
+    *   Implementation-specific ID of owning user
+    * @return
+    *   List of passkey names
+    */
+  def loadPasskeyNames(userId: String): Future[List[String]]
 
   /** Stores a new credential record corresponding to a passkey after successful passkey registration. Associates the
     * credential with a user ID and friendly name.
