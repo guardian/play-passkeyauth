@@ -13,17 +13,17 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * @tparam U
   *   The user type
- *
+  *
   * @tparam A
   *   The body content type (e.g., `AnyContent`, `JsValue`)
   *
   * @param authenticationData
   *   The JSON response from `navigator.credentials.get()` in the browser. This contains the signed assertion data
   *   needed to verify the passkey.
- *
+  *
   * @param user
   *   The user attempting to authenticate
- *
+  *
   * @param request
   *   The original Play request being wrapped
   */
@@ -76,7 +76,7 @@ trait AuthenticationDataExtractor[R[_] <: Request[_]] {
   *
   * @param authDataExtractor
   *   Strategy for extracting the WebAuthn assertion response JSON
- *
+  *
   * @param executionContext
   *   The execution context for async operations
   */

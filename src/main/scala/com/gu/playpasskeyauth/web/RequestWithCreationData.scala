@@ -18,16 +18,16 @@ import scala.concurrent.{ExecutionContext, Future}
   *   The body content type (e.g., `AnyContent`, `JsValue`)
   *
   * @param passkeyName
-  *   A human-readable name for this passkey credential, typically provided by the user. Examples: "Mac Chrome",
-  *   "Apple keychain", "Yubikey"
- *
+  *   A human-readable name for this passkey credential, typically provided by the user. Examples: "Mac Chrome", "Apple
+  *   keychain", "Yubikey"
+  *
   * @param creationData
   *   The JSON response from `navigator.credentials.create()` in the browser. This contains the public key credential
   *   data needed to register the passkey.
- *
+  *
   * @param user
   *   The authenticated user registering the passkey
- *
+  *
   * @param request
   *   The original Play request being wrapped
   */
@@ -98,7 +98,7 @@ trait PasskeyNameExtractor[R[_] <: Request[_]] {
   *
   * @param creationDataExtractor
   *   Strategy for extracting the WebAuthn creation response JSON
- *
+  *
   * @param passkeyNameExtractor
   *   Strategy for extracting the user-provided passkey name
   */

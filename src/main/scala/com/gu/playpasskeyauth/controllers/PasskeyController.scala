@@ -70,7 +70,7 @@ class PasskeyController[U: PasskeyUser, B](
     *
     * @see
     *   [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-credential-key-pair]]
-   *
+    *
     * @return
     *   A Play action that returns the creation options as JSON, or an error response
     */
@@ -93,7 +93,7 @@ class PasskeyController[U: PasskeyUser, B](
     *
     * @see
     *   [[https://webauthn4j.github.io/webauthn4j/en/#registering-the-webauthn-public-key-credential-on-the-server]]
-   *
+    *
     * @return
     *   A Play action that redirects on success, or returns an error response
     */
@@ -115,7 +115,7 @@ class PasskeyController[U: PasskeyUser, B](
     *
     * @see
     *   [[https://webauthn4j.github.io/webauthn4j/en/#generating-a-webauthn-assertion]]
-   *
+    *
     * @return
     *   A Play action that returns the authentication options as JSON, or an error response
     */
