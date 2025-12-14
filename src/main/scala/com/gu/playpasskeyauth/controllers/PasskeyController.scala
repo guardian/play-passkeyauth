@@ -12,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 /** Controller for handling passkey registration and verification.
   */
-class BasePasskeyController[U: PasskeyUser, B](
+class PasskeyController[U: PasskeyUser, B](
     controllerComponents: ControllerComponents,
     passkeyService: PasskeyVerificationService[U],
     userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],

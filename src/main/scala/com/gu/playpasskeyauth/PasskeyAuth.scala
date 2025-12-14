@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth
 
-import com.gu.playpasskeyauth.controllers.BasePasskeyController
+import com.gu.playpasskeyauth.controllers.PasskeyController
 import com.gu.playpasskeyauth.filters.PasskeyVerificationFilter
 import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser}
 import com.gu.playpasskeyauth.services.{
@@ -38,11 +38,11 @@ class PasskeyAuth[U: PasskeyUser, R[A] <: Request[A], B](
     userAction.andThen(authDataAction).andThen(verificationFilter)
   }
 
-  def controller(): BasePasskeyController[U, B] = {
+  def controller(): PasskeyController[U, B] = {
     val verificationFilter = new PasskeyVerificationFilter[U](verificationService)
     val creationDataAction = new CreationDataAction[U](creationDataExtractor, passkeyNameExtractor)
     val userAndCreationDataAction = userAction.andThen(creationDataAction)
-    new BasePasskeyController[U, B](
+    new PasskeyController[U, B](
       controllerComponents,
       verificationService,
       userAction,
