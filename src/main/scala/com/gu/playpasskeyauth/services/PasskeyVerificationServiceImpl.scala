@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser}
+import com.gu.playpasskeyauth.models.{HostApp, PasskeyName, PasskeyUser}
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
@@ -19,8 +19,7 @@ import play.api.libs.json.JsValue
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Instant
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
@@ -30,7 +29,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
     generateChallenge: () => Challenge = () => new DefaultChallenge()
-) extends PasskeyVerificationService[U] {
+)(using ExecutionContext)
+    extends PasskeyVerificationService[U] {
 
   private val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
 
@@ -111,12 +111,16 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       creationResponse: JsValue
   ): Future[CredentialRecord] =
     for {
+      // Validate and sanitize the passkey name
+      validatedName <- PasskeyName.validate(passkeyName) match
+        case Right(name) => Future.successful(name)
+        case Left(error) => Future.failed(new IllegalArgumentException(error.message))
       // There's a potential race condition here if another request conflicts with it so would be better at DB level - but leaving it here for now
       _ <- passkeyRepo
         .loadPasskeyNames(user.id)
         .flatMap(names => {
-          if (names.contains(passkeyName)) {
-            Future.failed(new IllegalArgumentException(s"A passkey with the name '$passkeyName' already exists."))
+          if (names.contains(validatedName)) {
+            Future.failed(new IllegalArgumentException(s"A passkey with the name '$validatedName' already exists."))
           } else {
             Future.successful(())
           }
@@ -140,7 +144,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         verified.getClientExtensions,
         verified.getTransports
       )
-      _ <- passkeyRepo.insertPasskey(user.id, passkeyName, credentialRecord)
+      _ <- passkeyRepo.insertPasskey(user.id, validatedName, credentialRecord)
       _ <- challengeRepo.deleteRegistrationChallenge(user.id)
     } yield credentialRecord
 
