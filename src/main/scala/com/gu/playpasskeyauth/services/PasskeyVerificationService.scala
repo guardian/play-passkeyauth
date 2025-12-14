@@ -1,23 +1,23 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.googleauth.UserIdentity
+import com.gu.playpasskeyauth.models.PasskeyUser
 import com.webauthn4j.credential.CredentialRecord
 import com.webauthn4j.data.{AuthenticationData, PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions}
 import play.api.libs.json.JsValue
 
 import scala.concurrent.Future
 
-trait PasskeyVerificationService {
+trait PasskeyVerificationService[U: PasskeyUser] {
 
-  def buildCreationOptions(user: UserIdentity): Future[PublicKeyCredentialCreationOptions]
+  def buildCreationOptions(user: U): Future[PublicKeyCredentialCreationOptions]
 
-  def register(user: UserIdentity, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
+  def register(user: U, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
 
-  def buildAuthenticationOptions(user: UserIdentity): Future[PublicKeyCredentialRequestOptions]
+  def buildAuthenticationOptions(user: U): Future[PublicKeyCredentialRequestOptions]
 
   /** Verifies the given authentication response with the data stored by the relying party. Also updates the stored data
     * to keep it current. The signature counter and the last used timestamp will be updated following successful
     * verification.
     */
-  def verify(user: UserIdentity, authenticationResponse: JsValue): Future[AuthenticationData]
+  def verify(user: U, authenticationResponse: JsValue): Future[AuthenticationData]
 }

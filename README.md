@@ -56,12 +56,27 @@ libraryDependencies += "com.gu" %% "play-passkey-auth" % "<version>"
 
 ## Integration steps
 
-1. Implement a [PasskeyRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyRepository.scala).
-2. Implement a [PasskeyChallengeRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyChallengeRepository.scala).
-3. Implement a [CreationDataExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).
-4. Implement an [AuthenticationDataExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithAuthenticationData.scala).
-5. Implement a [PasskeyNameExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).
-6. Pass these as arguments into a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala).
+1. Define a [PasskeyUser](src/main/scala/com/gu/playpasskeyauth/models/PasskeyUser.scala) instance for your user type.
+2. Implement a [PasskeyRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyRepository.scala).
+3. Implement a [PasskeyChallengeRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyChallengeRepository.scala).
+4. Implement a [CreationDataExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).
+5. Implement an [AuthenticationDataExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithAuthenticationData.scala).
+6. Implement a [PasskeyNameExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).
+7. Implement a [UserExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithUser.scala).
+8. Pass these as arguments into a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala).
+
+### Defining a PasskeyUser
+
+The library is generic over your user type. You need to provide a `PasskeyUser` type class instance that defines how to extract an identifier from your user:
+
+```scala
+import com.gu.playpasskeyauth.models.PasskeyUser
+
+case class MyUser(email: String, name: String)
+
+given PasskeyUser[MyUser] with
+  extension (user: MyUser) def id: String = user.email
+```
 
 ## Integration examples
  show actual Scala/Play code
