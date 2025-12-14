@@ -10,14 +10,14 @@ import com.gu.playpasskeyauth.services.{
   PasskeyVerificationServiceImpl
 }
 import com.gu.playpasskeyauth.web.*
-import play.api.mvc.{ActionBuilder, AnyContent, Call, ControllerComponents, Request}
+import play.api.mvc.{ActionBuilder, Call, ControllerComponents, Request}
 
 import scala.concurrent.ExecutionContext
 
-class PasskeyAuth[U: PasskeyUser, R[A] <: Request[A]](
+class PasskeyAuth[U: PasskeyUser, R[A] <: Request[A], B](
     controllerComponents: ControllerComponents,
     app: HostApp,
-    authAction: ActionBuilder[R, AnyContent],
+    authAction: ActionBuilder[R, B],
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
     userExtractor: UserExtractor[U, R],
@@ -29,20 +29,20 @@ class PasskeyAuth[U: PasskeyUser, R[A] <: Request[A]](
   private val verificationService: PasskeyVerificationService[U] =
     new PasskeyVerificationServiceImpl[U](app, passkeyRepo, challengeRepo)
 
-  private val userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], AnyContent] =
+  private val userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B] =
     authAction.andThen(new UserAction[U, R](userExtractor))
 
-  def verificationAction(): ActionBuilder[[A] =>> RequestWithAuthenticationData[U, A], AnyContent] = {
+  def verificationAction(): ActionBuilder[[A] =>> RequestWithAuthenticationData[U, A], B] = {
     val authDataAction = new AuthenticationDataAction[U](authenticationDataExtractor)
     val verificationFilter = new PasskeyVerificationFilter[U](verificationService)
     userAction.andThen(authDataAction).andThen(verificationFilter)
   }
 
-  def controller(): BasePasskeyController[U] = {
+  def controller(): BasePasskeyController[U, B] = {
     val verificationFilter = new PasskeyVerificationFilter[U](verificationService)
     val creationDataAction = new CreationDataAction[U](creationDataExtractor, passkeyNameExtractor)
     val userAndCreationDataAction = userAction.andThen(creationDataAction)
-    new BasePasskeyController[U](
+    new BasePasskeyController[U, B](
       controllerComponents,
       verificationService,
       userAction,

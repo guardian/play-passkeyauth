@@ -1,9 +1,9 @@
 package com.gu.playpasskeyauth.controllers
 
-import com.gu.playpasskeyauth.models.PasskeyUser
 import com.gu.playpasskeyauth.models.JsonEncodings.given
+import com.gu.playpasskeyauth.models.PasskeyUser
 import com.gu.playpasskeyauth.services.PasskeyVerificationService
-import com.gu.playpasskeyauth.web.{RequestWithAuthenticationData, RequestWithCreationData, RequestWithUser}
+import com.gu.playpasskeyauth.web.{RequestWithCreationData, RequestWithUser}
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -12,11 +12,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 /** Controller for handling passkey registration and verification.
   */
-class BasePasskeyController[U: PasskeyUser](
+class BasePasskeyController[U: PasskeyUser, B](
     controllerComponents: ControllerComponents,
     passkeyService: PasskeyVerificationService[U],
-    userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], AnyContent],
-    creationDataAction: ActionBuilder[[A] =>> RequestWithCreationData[U, A], AnyContent],
+    userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
+    creationDataAction: ActionBuilder[[A] =>> RequestWithCreationData[U, A], B],
     registrationRedirect: Call
 )(using val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
@@ -34,7 +34,7 @@ class BasePasskeyController[U: PasskeyUser](
 
   /** See [[https://webauthn4j.github.io/webauthn4j/en/#registering-the-webauthn-public-key-credential-on-the-server]].
     */
-  def register: Action[AnyContent] = creationDataAction.async { request =>
+  def register: Action[B] = creationDataAction.async { request =>
     apiRedirectResponse(
       "register",
       request.user,
