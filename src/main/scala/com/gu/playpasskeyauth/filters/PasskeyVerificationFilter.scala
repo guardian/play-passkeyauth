@@ -10,9 +10,23 @@ import play.api.mvc.{ActionFilter, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-/** Verifies passkey presented in request and only allows an action to continue if verification is successful.
+/** Action filter that verifies a passkey assertion before allowing the request to proceed.
   *
-  * See [[https://webauthn4j.github.io/webauthn4j/en/#webauthn-assertion-verification-and-post-processing]].
+  * This filter intercepts requests containing WebAuthn authentication data and verifies the passkey signature against
+  * the stored credential. Only requests with valid passkey assertions are allowed through; invalid or missing
+  * assertions result in error responses.
+  *
+  * The filter also updates the stored credential metadata (signature counter, last used timestamp) after successful
+  * verification to maintain security and provide audit information.
+  *
+  * @tparam U
+  *   The user type, which must have a [[PasskeyUser]] type class instance.
+  *
+  * @param verifier
+  *   The service that performs passkey verification
+  *
+  * @see
+  *   [[https://webauthn4j.github.io/webauthn4j/en/#webauthn-assertion-verification-and-post-processing]]
   */
 class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationService[U])(using
     val executionContext: ExecutionContext
