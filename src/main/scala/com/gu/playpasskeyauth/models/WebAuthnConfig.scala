@@ -38,10 +38,10 @@ import scala.concurrent.duration.{Duration, SECONDS}
   *   provides cryptographic proof of the authenticator's make and model.
   *
   * @param creationExtensions
-  *   Optional WebAuthn extensions for credential creation. Null means no extensions.
+  *   Optional WebAuthn extensions for credential creation. None means no extensions.
   *
   * @param authExtensions
-  *   Optional WebAuthn extensions for authentication. Null means no extensions.
+  *   Optional WebAuthn extensions for authentication. None means no extensions.
   *
   * @param userVerificationRequired
   *   Whether user verification (PIN, biometric, etc.) is required by the relying party. This is enforced on the server
@@ -62,8 +62,8 @@ case class WebAuthnConfig(
     authenticatorSelectionCriteria: AuthenticatorSelectionCriteria,
     hints: Seq[PublicKeyCredentialHints],
     attestation: AttestationConveyancePreference,
-    creationExtensions: AuthenticationExtensionsClientInputs[RegistrationExtensionClientInput],
-    authExtensions: AuthenticationExtensionsClientInputs[AuthenticationExtensionClientInput],
+    creationExtensions: Option[AuthenticationExtensionsClientInputs[RegistrationExtensionClientInput]],
+    authExtensions: Option[AuthenticationExtensionsClientInputs[AuthenticationExtensionClientInput]],
     userVerificationRequired: Boolean,
     userVerification: UserVerificationRequirement,
     credentialType: PublicKeyCredentialType,
@@ -118,8 +118,8 @@ object WebAuthnConfig {
       authenticatorSelectionCriteria = authenticatorSelectionCriteria,
       hints = Seq(CLIENT_DEVICE, SECURITY_KEY, HYBRID),
       attestation = AttestationConveyancePreference.DIRECT,
-      creationExtensions = null,
-      authExtensions = null,
+      creationExtensions = None,
+      authExtensions = None,
       userVerificationRequired = true,
       userVerification = UserVerificationRequirement.REQUIRED,
       credentialType = PUBLIC_KEY,

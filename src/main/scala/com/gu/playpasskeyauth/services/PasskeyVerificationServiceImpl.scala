@@ -46,7 +46,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         config.authenticatorSelectionCriteria,
         config.hints.asJava,
         config.attestation,
-        config.creationExtensions
+        config.creationExtensions.orNull
       )
     }
 
@@ -56,7 +56,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       creationResponse: JsValue
   ): Future[CredentialRecord] =
     for {
-      // Validate and sanitize the passkey name
+      // Validate and sanitise the passkey name
       validatedName <- PasskeyName.validate(passkeyName) match
         case Right(name) => Future.successful(name)
         case Left(error) => Future.failed(new IllegalArgumentException(error.message))
@@ -109,7 +109,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         allowCredentials.asJava,
         config.userVerification,
         config.hints.asJava,
-        config.authExtensions
+        config.authExtensions.orNull
       )
     }
 
