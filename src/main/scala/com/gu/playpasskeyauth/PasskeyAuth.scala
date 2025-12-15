@@ -2,7 +2,7 @@ package com.gu.playpasskeyauth
 
 import com.gu.playpasskeyauth.controllers.PasskeyController
 import com.gu.playpasskeyauth.filters.PasskeyVerificationFilter
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser}
+import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser, WebAuthnConfig}
 import com.gu.playpasskeyauth.services.{
   PasskeyChallengeRepository,
   PasskeyRepository,
@@ -61,6 +61,10 @@ import scala.concurrent.ExecutionContext
   * @param registrationRedirect
   *   Where to redirect after successful passkey registration. Example: `routes.AccountController.settings()`
   *
+  * @param webAuthnConfig
+  *   Configuration for WebAuthn operations (algorithms, timeouts, etc.). Defaults to [[WebAuthnConfig.default]] which
+  *   is suitable for most applications.
+  *
   * @example
   *   {{{
   * // In your controller or module:
@@ -108,10 +112,11 @@ class PasskeyAuth[U: PasskeyUser, B](
     creationDataExtractor: CreationDataExtractor[[A] =>> RequestWithUser[U, A]],
     authenticationDataExtractor: AuthenticationDataExtractor[[A] =>> RequestWithUser[U, A]],
     passkeyNameExtractor: PasskeyNameExtractor[[A] =>> RequestWithUser[U, A]],
-    registrationRedirect: Call
+    registrationRedirect: Call,
+    webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
 )(using ExecutionContext) {
   private val verificationService: PasskeyVerificationService[U] =
-    new PasskeyVerificationServiceImpl[U](app, passkeyRepo, challengeRepo)
+    new PasskeyVerificationServiceImpl[U](app, passkeyRepo, challengeRepo, webAuthnConfig)
 
   /** Creates an action builder that verifies passkey authentication.
     *

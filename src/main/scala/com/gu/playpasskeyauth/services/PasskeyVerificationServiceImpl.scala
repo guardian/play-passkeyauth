@@ -1,18 +1,10 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyName, PasskeyUser}
+import com.gu.playpasskeyauth.models.{HostApp, PasskeyName, PasskeyUser, WebAuthnConfig}
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
-import com.webauthn4j.data.PublicKeyCredentialHints.{CLIENT_DEVICE, HYBRID, SECURITY_KEY}
-import com.webauthn4j.data.PublicKeyCredentialType.PUBLIC_KEY
-import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.challenge.{Challenge, DefaultChallenge}
-import com.webauthn4j.data.extension.client.{
-  AuthenticationExtensionClientInput,
-  AuthenticationExtensionsClientInputs,
-  RegistrationExtensionClientInput
-}
 import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.util.Base64UrlUtil
 import play.api.libs.json.JsValue
@@ -20,7 +12,6 @@ import play.api.libs.json.JsValue
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{Duration, SECONDS}
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
@@ -28,60 +19,14 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     app: HostApp,
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
+    config: WebAuthnConfig = WebAuthnConfig.default,
     generateChallenge: () => Challenge = () => new DefaultChallenge()
 )(using ExecutionContext)
     extends PasskeyVerificationService[U] {
 
   private val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
 
-  private val userVerificationRequired = true
-  private val userVerification = UserVerificationRequirement.REQUIRED
-
   private val relyingParty = new PublicKeyCredentialRpEntity(app.host, app.name)
-
-  // In order of algorithms we prefer
-  private val publicKeyCredentialParameters = List(
-    // EdDSA for better security/performance in newer authenticators
-    new PublicKeyCredentialParameters(
-      PUBLIC_KEY,
-      COSEAlgorithmIdentifier.EdDSA
-    ),
-    // ES256 is widely supported and efficient
-    new PublicKeyCredentialParameters(
-      PUBLIC_KEY,
-      COSEAlgorithmIdentifier.ES256
-    ),
-    // RS256 for broader compatibility
-    new PublicKeyCredentialParameters(
-      PUBLIC_KEY,
-      COSEAlgorithmIdentifier.RS256
-    )
-  )
-
-  private val timeout = Duration(60, SECONDS)
-
-  private val authenticatorSelectionCriteria = {
-    // Allow the widest possible range of authenticators
-    val authenticatorAttachment: AuthenticatorAttachment = null
-    new AuthenticatorSelectionCriteria(
-      authenticatorAttachment,
-      // Don't allow passkeys unknown to the server to be discovered at authentication time
-      ResidentKeyRequirement.DISCOURAGED,
-      UserVerificationRequirement.REQUIRED
-    )
-  }
-
-  private val hints = Seq(CLIENT_DEVICE, SECURITY_KEY, HYBRID)
-
-  private val attestation = AttestationConveyancePreference.DIRECT
-
-  private val creationExtensions: AuthenticationExtensionsClientInputs[RegistrationExtensionClientInput] = null
-  private val authExtensions: AuthenticationExtensionsClientInputs[AuthenticationExtensionClientInput] = null
-
-  private val credType = PUBLIC_KEY
-
-  // TODO why is this hardcoded?
-  private val transports: Option[Set[AuthenticatorTransport]] = None
 
   def buildCreationOptions(user: U): Future[PublicKeyCredentialCreationOptions] =
     for {
@@ -95,13 +40,13 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         relyingParty,
         userInfo,
         challenge,
-        publicKeyCredentialParameters.asJava,
-        timeout.toMillis,
+        config.publicKeyCredentialParameters.asJava,
+        config.timeout.toMillis,
         excludeCredentials.asJava,
-        authenticatorSelectionCriteria,
-        hints.asJava,
-        attestation,
-        creationExtensions
+        config.authenticatorSelectionCriteria,
+        config.hints.asJava,
+        config.attestation,
+        config.creationExtensions
       )
     }
 
@@ -133,8 +78,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
             creationResponse.toString,
             new RegistrationParameters(
               ServerProperty.builder.origin(app.origin).rpId(app.host).challenge(challenge).build(),
-              publicKeyCredentialParameters.asJava,
-              userVerificationRequired
+              config.publicKeyCredentialParameters.asJava,
+              config.userVerificationRequired
             )
           )
         )
@@ -159,12 +104,12 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       val allowCredentials = passkeyIds.map(toDescriptor)
       new PublicKeyCredentialRequestOptions(
         challenge,
-        timeout.toMillis,
+        config.timeout.toMillis,
         rpId,
         allowCredentials.asJava,
-        userVerification,
-        hints.asJava,
-        authExtensions
+        config.userVerification,
+        config.hints.asJava,
+        config.authExtensions
       )
     }
 
@@ -181,7 +126,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
               ServerProperty.builder.origin(app.origin).rpId(app.host).challenge(challenge).build(),
               credentialRecord,
               List(authData.getCredentialId).asJava,
-              userVerificationRequired
+              config.userVerificationRequired
             )
           )
         )
@@ -198,9 +143,9 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
   private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor = {
     val id = Base64UrlUtil.decode(passkeyId)
     new PublicKeyCredentialDescriptor(
-      credType,
+      config.credentialType,
       id,
-      transports.map(_.asJava).orNull
+      config.transports.map(_.asJava).orNull
     )
   }
 }
