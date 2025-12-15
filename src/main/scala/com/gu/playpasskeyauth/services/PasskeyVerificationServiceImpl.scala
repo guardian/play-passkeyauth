@@ -119,8 +119,9 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       _ <- passkeyRepo
         .loadPasskeyNames(user.id)
         .flatMap(names => {
-          if (names.contains(validatedName)) {
-            Future.failed(new IllegalArgumentException(s"A passkey with the name '$validatedName' already exists."))
+          if (names.contains(validatedName.value)) {
+            Future
+              .failed(new IllegalArgumentException(s"A passkey with the name '${validatedName.value}' already exists."))
           } else {
             Future.successful(())
           }
@@ -144,7 +145,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         verified.getClientExtensions,
         verified.getTransports
       )
-      _ <- passkeyRepo.insertPasskey(user.id, validatedName, credentialRecord)
+      _ <- passkeyRepo.insertPasskey(user.id, validatedName.value, credentialRecord)
       _ <- challengeRepo.deleteRegistrationChallenge(user.id)
     } yield credentialRecord
 
