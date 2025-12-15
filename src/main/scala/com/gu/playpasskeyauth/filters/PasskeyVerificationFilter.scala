@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.filters
 
 import com.gu.playpasskeyauth.models.PasskeyUser
-import com.gu.playpasskeyauth.services.PasskeyVerificationService
+import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.RequestWithAuthenticationData
 import com.webauthn4j.data.AuthenticationData
 import play.api.Logging
@@ -43,8 +43,8 @@ class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationSer
         None
       }
       .recover {
-        case e: IllegalArgumentException =>
-          logger.error(e.getMessage, e)
+        case e: PasskeyException =>
+          logger.warn(s"Domain error during verification: ${e.getMessage}")
           Some(BadRequest("Something went wrong"))
         case e =>
           logger.error(e.getMessage, e)

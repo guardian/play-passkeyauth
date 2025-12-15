@@ -59,14 +59,14 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       // Validate and sanitise the passkey name
       validatedName <- PasskeyName.validate(passkeyName) match
         case Right(name) => Future.successful(name)
-        case Left(error) => Future.failed(new IllegalArgumentException(error.message))
+        case Left(error) => Future.failed(PasskeyException(PasskeyError.InvalidName(error)))
       // There's a potential race condition here if another request conflicts with it so would be better at DB level - but leaving it here for now
       _ <- passkeyRepo
         .loadPasskeyNames(user.id)
         .flatMap(names => {
           if (names.contains(validatedName.value)) {
             Future
-              .failed(new IllegalArgumentException(s"A passkey with the name '${validatedName.value}' already exists."))
+              .failed(PasskeyException(PasskeyError.DuplicateName(validatedName.value)))
           } else {
             Future.successful(())
           }

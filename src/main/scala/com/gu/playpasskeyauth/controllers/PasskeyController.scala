@@ -2,7 +2,7 @@ package com.gu.playpasskeyauth.controllers
 
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.models.PasskeyUser
-import com.gu.playpasskeyauth.services.PasskeyVerificationService
+import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.{RequestWithCreationData, RequestWithUser}
 import play.api.Logging
 import play.api.libs.json.Writes
@@ -158,8 +158,8 @@ class PasskeyController[U: PasskeyUser, B](
 
   private def apiResponse(action: String, user: U, fresult: => Future[Result]): Future[Result] =
     fresult.recover {
-      case e: IllegalArgumentException =>
-        logger.error(s"$action: ${user.id}: Failure: ${e.getMessage}", e)
+      case e: PasskeyException =>
+        logger.warn(s"$action: ${user.id}: Domain error: ${e.getMessage}")
         BadRequest("Something went wrong")
       case e =>
         logger.error(s"$action: ${user.id}: Failure: ${e.getMessage}", e)
