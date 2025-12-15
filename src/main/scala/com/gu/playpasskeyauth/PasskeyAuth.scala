@@ -167,7 +167,6 @@ class PasskeyAuth[U: PasskeyUser, B](
     *   }}}
     */
   def controller(): PasskeyController[U, B] = {
-    val verificationFilter = new PasskeyVerificationFilter[U](verificationService)
     val creationDataAction = new CreationDataAction[U](creationDataExtractor, passkeyNameExtractor)
     val userAndCreationDataAction = userAction.andThen(creationDataAction)
     new PasskeyController[U, B](
