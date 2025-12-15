@@ -38,7 +38,7 @@ import java.net.URI
 case class HostApp(name: String, uri: URI) {
 
   require(name.trim.nonEmpty, "HostApp name must not be empty")
-  require(uri.getHost.nonEmpty, "HostApp uri must have a valid host")
+  require(Option(uri.getHost).exists(_.nonEmpty), "HostApp uri must have a valid host")
   require(
     uri.getScheme == "https" || (uri.getScheme == "http" && uri.getHost == "localhost"),
     "HostApp uri must use https (or http for localhost only)"
