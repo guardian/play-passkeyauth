@@ -1,5 +1,6 @@
 package com.gu.playpasskeyauth.services
 
+import com.gu.playpasskeyauth.models.UserId
 import com.webauthn4j.data.client.challenge.Challenge
 
 import scala.concurrent.Future
@@ -17,32 +18,32 @@ trait PasskeyChallengeRepository {
     * given user.
     *
     * @param userId
-    *   Implementation-specific ID of user corresponding to challenge
+    *   ID of user corresponding to challenge
     * @return
     *   The registration challenge
     */
-  def loadRegistrationChallenge(userId: String): Future[Challenge]
+  def loadRegistrationChallenge(userId: UserId): Future[Challenge]
 
   /** Inserts a registration challenge for the given user.
     *
     * @param userId
-    *   Implementation-specific ID of user corresponding to challenge
+    *   ID of user corresponding to challenge
     * @param challenge
     *   Challenge to store
     * @return
     *   Indication of success
     */
-  def insertRegistrationChallenge(userId: String, challenge: Challenge): Future[Unit]
+  def insertRegistrationChallenge(userId: UserId, challenge: Challenge): Future[Unit]
 
   /** Deletes the user's registration challenge. When this is called it's expected that there will be precisely one
     * registration challenge to delete.
     *
     * @param userId
-    *   Implementation-specific ID of user corresponding to challenge
+    *   ID of user corresponding to challenge
     * @return
     *   Indication of success
     */
-  def deleteRegistrationChallenge(userId: String): Future[Unit]
+  def deleteRegistrationChallenge(userId: UserId): Future[Unit]
 
   /** Loads the current authentication challenge so that it can be compared with the one offered for authentication.
     * There should always be 0..1 authentication challenges per user. This method should only be called when an
@@ -50,30 +51,30 @@ trait PasskeyChallengeRepository {
     * challenge for the given user.
     *
     * @param userId
-    *   Implementation-specific ID of user corresponding to challenge
+    *   ID of user corresponding to challenge
     * @return
     *   The authentication challenge
     */
-  def loadAuthenticationChallenge(userId: String): Future[Challenge]
+  def loadAuthenticationChallenge(userId: UserId): Future[Challenge]
 
   /** Inserts an authentication challenge for the given user.
     *
     * @param userId
-    *   Implementation-specific ID of user corresponding to challenge
+    *   ID of user corresponding to challenge
     * @param challenge
     *   Challenge to store
     * @return
     *   Indication of success
     */
-  def insertAuthenticationChallenge(userId: String, challenge: Challenge): Future[Unit]
+  def insertAuthenticationChallenge(userId: UserId, challenge: Challenge): Future[Unit]
 
   /** Deletes the user's authentication challenge. When this is called it's expected that there will be precisely one
     * authentication challenge to delete.
     *
     * @param userId
-    *   Implementation-specific ID of user corresponding to challenge
+    *   ID of user corresponding to challenge
     * @return
     *   Indication of success
     */
-  def deleteAuthenticationChallenge(userId: String): Future[Unit]
+  def deleteAuthenticationChallenge(userId: UserId): Future[Unit]
 }

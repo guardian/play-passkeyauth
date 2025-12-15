@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyName, PasskeyUser, WebAuthnConfig}
+import com.gu.playpasskeyauth.models.{HostApp, PasskeyName, PasskeyUser, UserId, WebAuthnConfig}
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
@@ -9,7 +9,6 @@ import com.webauthn4j.server.ServerProperty
 import com.webauthn4j.util.Base64UrlUtil
 import play.api.libs.json.JsValue
 
-import java.nio.charset.StandardCharsets.UTF_8
 import java.time.Clock
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
@@ -35,7 +34,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       challenge = generateChallenge()
       _ <- challengeRepo.insertRegistrationChallenge(user.id, challenge)
     } yield {
-      val userInfo = new PublicKeyCredentialUserEntity(user.id.getBytes(UTF_8), user.id, user.id)
+      val userInfo = new PublicKeyCredentialUserEntity(user.id.bytes, user.id.value, user.id.value)
       val excludeCredentials = passkeyIds.map(toDescriptor)
       new PublicKeyCredentialCreationOptions(
         relyingParty,
@@ -61,17 +60,14 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       validatedName <- PasskeyName.validate(passkeyName) match
         case Right(name) => Future.successful(name)
         case Left(error) => Future.failed(PasskeyException(PasskeyError.InvalidName(error)))
-      // There's a potential race condition here if another request conflicts with it so would be better at DB level - but leaving it here for now
+      // Check for duplicate name (potential race condition - ideally handled at DB level)
       _ <- passkeyRepo
         .loadPasskeyNames(user.id)
-        .flatMap(names => {
-          if (names.contains(validatedName.value)) {
-            Future
-              .failed(PasskeyException(PasskeyError.DuplicateName(validatedName.value)))
-          } else {
-            Future.successful(())
-          }
-        })
+        .flatMap(names =>
+          if names.contains(validatedName.value) then
+            Future.failed(PasskeyException(PasskeyError.DuplicateName(validatedName.value)))
+          else Future.successful(())
+        )
       challenge <- challengeRepo.loadRegistrationChallenge(user.id)
       verified <- Future.fromTry(
         Try(

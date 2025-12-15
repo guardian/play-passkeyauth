@@ -2,7 +2,7 @@ package com.gu.playpasskeyauth.controllers
 
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.models.PasskeyUser
-import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
+import com.gu.playpasskeyauth.services.{PasskeyError, PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.{RequestWithCreationData, RequestWithUser}
 import play.api.Logging
 import play.api.libs.json.Writes
