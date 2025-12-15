@@ -140,12 +140,10 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedAuthData.getCredentialId, Instant.now())
     } yield verifiedAuthData
 
-  private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor = {
-    val id = Base64UrlUtil.decode(passkeyId)
+  private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor =
     new PublicKeyCredentialDescriptor(
       config.credentialType,
-      id,
+      Base64UrlUtil.decode(passkeyId),
       config.transports.map(_.asJava).orNull
     )
-  }
 }
