@@ -20,7 +20,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
     config: WebAuthnConfig = WebAuthnConfig.default,
-    generateChallenge: () => Challenge = () => new DefaultChallenge()
+    generateChallenge: () => Challenge = () => new DefaultChallenge(),
+    clock: () => Instant = () => Instant.now()
 )(using ExecutionContext)
     extends PasskeyVerificationService[U] {
 
@@ -137,7 +138,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         verifiedAuthData.getCredentialId,
         verifiedAuthData.getAuthenticatorData.getSignCount
       )
-      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedAuthData.getCredentialId, Instant.now())
+      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedAuthData.getCredentialId, clock())
     } yield verifiedAuthData
 
   private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor =
