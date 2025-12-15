@@ -151,6 +151,8 @@ class PasskeyAuth[U: PasskeyUser, B](
     *   - `creationOptions`: Generate options for `navigator.credentials.create()`
     *   - `register`: Register a new passkey credential
     *   - `authenticationOptions`: Generate options for `navigator.credentials.get()`
+    *   - `list`: List all passkeys for the user with metadata
+    *   - `delete(passkeyId)`: Delete a passkey by its base64url-encoded ID
     *
     * @return
     *   A configured [[PasskeyController]] instance
@@ -158,9 +160,11 @@ class PasskeyAuth[U: PasskeyUser, B](
     * @example
     *   {{{
     * // In your routes file:
-    * POST /passkey/creation-options  controllers.MyPasskeyController.creationOptions
-    * POST /passkey/register          controllers.MyPasskeyController.register
-    * POST /passkey/auth-options      controllers.MyPasskeyController.authenticationOptions
+    * POST   /passkey/creation-options  controllers.MyPasskeyController.creationOptions
+    * POST   /passkey/register          controllers.MyPasskeyController.register
+    * POST   /passkey/auth-options      controllers.MyPasskeyController.authenticationOptions
+    * GET    /passkey/list              controllers.MyPasskeyController.list
+    * DELETE /passkey/:id               controllers.MyPasskeyController.delete(id)
     *
     * // In your controller:
     * class MyPasskeyController @Inject()(passkeyAuth: PasskeyAuth[...]) {
@@ -168,6 +172,8 @@ class PasskeyAuth[U: PasskeyUser, B](
     *   def creationOptions = controller.creationOptions
     *   def register = controller.register
     *   def authenticationOptions = controller.authenticationOptions
+    *   def list = controller.list
+    *   def delete(id: String) = controller.delete(id)
     * }
     *   }}}
     */

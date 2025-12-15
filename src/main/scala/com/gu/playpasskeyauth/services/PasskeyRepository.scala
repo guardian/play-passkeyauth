@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{PasskeyId, UserId}
+import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyInfo, UserId}
 import com.webauthn4j.credential.CredentialRecord
 
 import java.time.Instant
@@ -39,6 +39,16 @@ trait PasskeyRepository {
     */
   def loadPasskeyNames(userId: UserId): Future[List[String]]
 
+  /** Lists all passkeys belonging to a given user with their metadata. Useful for displaying in account settings or
+    * management screens.
+    *
+    * @param userId
+    *   ID of owning user
+    * @return
+    *   List of passkey information including names and timestamps
+    */
+  def listPasskeys(userId: UserId): Future[List[PasskeyInfo]]
+
   /** Stores a new credential record corresponding to a passkey after successful passkey registration. Associates the
     * credential with a user ID and friendly name.
     *
@@ -52,6 +62,17 @@ trait PasskeyRepository {
     *   Indication of success
     */
   def insertPasskey(userId: UserId, passkeyName: String, passkey: CredentialRecord): Future[Unit]
+
+  /** Deletes a passkey. Users should be able to remove passkeys they no longer use or that may have been compromised.
+    *
+    * @param userId
+    *   ID of owning user
+    * @param passkeyId
+    *   Webauthn ID of passkey to delete
+    * @return
+    *   Indication of success. Should fail if the passkey doesn't exist or doesn't belong to the user.
+    */
+  def deletePasskey(userId: UserId, passkeyId: PasskeyId): Future[Unit]
 
   /** Updates the signature count for a credential after successful authentication. This counter helps detect cloned
     * authenticators as it should increment with each use.

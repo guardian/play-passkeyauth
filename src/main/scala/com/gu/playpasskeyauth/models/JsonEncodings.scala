@@ -11,7 +11,7 @@ import com.webauthn4j.data.{
   PublicKeyCredentialUserEntity
 }
 import com.webauthn4j.util.Base64UrlUtil
-import play.api.libs.json.{JsNull, JsValue, Json, Writes}
+import play.api.libs.json.{JsArray, JsNull, JsObject, JsString, JsValue, Json, Writes}
 
 object JsonEncodings {
 
@@ -23,6 +23,18 @@ object JsonEncodings {
 
   given Writes[Unit] with
     def writes(u: Unit): JsValue = JsNull
+
+  given Writes[PasskeyInfo] with
+    def writes(info: PasskeyInfo): JsValue = JsObject(
+      Seq(
+        "id" -> JsString(info.id.toBase64Url),
+        "name" -> JsString(info.name),
+        "createdAt" -> JsString(info.createdAt.toString)
+      ) ++ info.lastUsedAt.map(t => "lastUsedAt" -> JsString(t.toString))
+    )
+
+  given Writes[List[PasskeyInfo]] with
+    def writes(infos: List[PasskeyInfo]): JsValue = JsArray(infos.map(summon[Writes[PasskeyInfo]].writes))
 
   /*
    * As the webauthn library uses Jackson annotations to generate JSON encodings,

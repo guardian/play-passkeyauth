@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyId, PasskeyName, PasskeyUser, UserId, WebAuthnConfig}
+import com.gu.playpasskeyauth.models.{HostApp, PasskeyId, PasskeyInfo, PasskeyName, PasskeyUser, UserId, WebAuthnConfig}
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
@@ -137,6 +137,12 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       )
       _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedCredentialId, clock.instant())
     } yield verifiedAuthData
+
+  def listPasskeys(user: U): Future[List[PasskeyInfo]] =
+    passkeyRepo.listPasskeys(user.id)
+
+  def deletePasskey(user: U, passkeyId: PasskeyId): Future[Unit] =
+    passkeyRepo.deletePasskey(user.id, passkeyId)
 
   private def toDescriptor(passkeyId: PasskeyId): PublicKeyCredentialDescriptor =
     new PublicKeyCredentialDescriptor(

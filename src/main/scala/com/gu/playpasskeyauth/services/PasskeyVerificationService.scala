@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.PasskeyUser
+import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyInfo, PasskeyUser}
 import com.webauthn4j.credential.CredentialRecord
 import com.webauthn4j.data.{AuthenticationData, PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions}
 import play.api.libs.json.JsValue
@@ -45,6 +45,29 @@ trait PasskeyVerificationService[U: PasskeyUser] {
     *   A Future containing the registered [[com.webauthn4j.credential.CredentialRecord]]
     */
   def register(user: U, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
+
+  /** Lists all passkeys registered for the user.
+    *
+    * @param user
+    *   The user whose passkeys to list
+    *
+    * @return
+    *   A Future containing a list of [[PasskeyInfo]] with metadata about each passkey
+    */
+  def listPasskeys(user: U): Future[List[PasskeyInfo]]
+
+  /** Deletes a passkey for the user.
+    *
+    * @param user
+    *   The user who owns the passkey
+    *
+    * @param passkeyId
+    *   The ID of the passkey to delete
+    *
+    * @return
+    *   A Future that completes when the passkey is deleted
+    */
+  def deletePasskey(user: U, passkeyId: PasskeyId): Future[Unit]
 
   /** Builds the options needed for authenticating with an existing passkey.
     *
