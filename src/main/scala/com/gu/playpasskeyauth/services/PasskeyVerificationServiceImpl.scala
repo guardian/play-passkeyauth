@@ -31,7 +31,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     for {
       passkeyIds <- passkeyRepo.loadPasskeyIds(user.id)
       challenge = generateChallenge()
-      _ <- challengeRepo.insertRegistrationChallenge(user.id, challenge)
+      expiresAt = clock.instant().plusMillis(config.timeout.toMillis)
+      _ <- challengeRepo.insertRegistrationChallenge(user.id, challenge, expiresAt)
     } yield {
       val userInfo = new PublicKeyCredentialUserEntity(user.id.bytes, user.id.value, user.id.value)
       val excludeCredentials = passkeyIds.map(toDescriptor)
@@ -94,7 +95,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     for {
       passkeyIds <- passkeyRepo.loadPasskeyIds(user.id)
       challenge = generateChallenge()
-      _ <- challengeRepo.insertAuthenticationChallenge(user.id, challenge)
+      expiresAt = clock.instant().plusMillis(config.timeout.toMillis)
+      _ <- challengeRepo.insertAuthenticationChallenge(user.id, challenge, expiresAt)
     } yield {
       val rpId = app.host
       val allowCredentials = passkeyIds.map(toDescriptor)
