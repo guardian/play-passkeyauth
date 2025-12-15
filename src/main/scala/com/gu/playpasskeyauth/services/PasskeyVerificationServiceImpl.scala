@@ -10,7 +10,7 @@ import com.webauthn4j.util.Base64UrlUtil
 import play.api.libs.json.JsValue
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.time.Instant
+import java.time.Clock
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
@@ -21,7 +21,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     challengeRepo: PasskeyChallengeRepository,
     config: WebAuthnConfig = WebAuthnConfig.default,
     generateChallenge: () => Challenge = () => new DefaultChallenge(),
-    clock: () => Instant = () => Instant.now()
+    clock: Clock = Clock.systemUTC()
 )(using ExecutionContext)
     extends PasskeyVerificationService[U] {
 
@@ -138,7 +138,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         verifiedAuthData.getCredentialId,
         verifiedAuthData.getAuthenticatorData.getSignCount
       )
-      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedAuthData.getCredentialId, clock())
+      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedAuthData.getCredentialId, clock.instant())
     } yield verifiedAuthData
 
   private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor =
