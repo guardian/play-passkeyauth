@@ -102,7 +102,7 @@ object WebAuthnConfig {
     )
 
     val authenticatorSelectionCriteria = {
-      // Allow the widest possible range of authenticators
+      // null means "no preference" in the WebAuthn Java API - allows both platform and roaming authenticators
       val authenticatorAttachment: AuthenticatorAttachment = null
       new AuthenticatorSelectionCriteria(
         authenticatorAttachment,
