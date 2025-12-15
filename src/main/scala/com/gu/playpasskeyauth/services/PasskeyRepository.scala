@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.UserId
+import com.gu.playpasskeyauth.models.{PasskeyId, UserId}
 import com.webauthn4j.credential.CredentialRecord
 
 import java.time.Instant
@@ -18,7 +18,7 @@ trait PasskeyRepository {
     * @return
     *   Stored webauthn4j credential data
     */
-  def loadPasskey(userId: UserId, passkeyId: Array[Byte]): Future[CredentialRecord]
+  def loadPasskey(userId: UserId, passkeyId: PasskeyId): Future[CredentialRecord]
 
   /** Loads IDs of all passkeys belonging to a given user. Needed to tell browser which authenticators to allow for
     * authentication.
@@ -28,7 +28,7 @@ trait PasskeyRepository {
     * @return
     *   List of webauthn passkey IDs
     */
-  def loadPasskeyIds(userId: UserId): Future[List[String]]
+  def loadPasskeyIds(userId: UserId): Future[List[PasskeyId]]
 
   /** Loads names of all passkeys belonging to a given user. Needed to ensure a registered passkey has a unique name.
     *
@@ -65,7 +65,7 @@ trait PasskeyRepository {
     * @return
     *   Indication of success
     */
-  def updateAuthenticationCount(userId: UserId, passkeyId: Array[Byte], signCount: Long): Future[Unit]
+  def updateAuthenticationCount(userId: UserId, passkeyId: PasskeyId, signCount: Long): Future[Unit]
 
   /** Records the timestamp when a passkey was last used for authentication. Useful for tracking activity and managing
     * unused credentials.
@@ -79,5 +79,5 @@ trait PasskeyRepository {
     * @return
     *   Indication of success
     */
-  def updateLastUsedTime(userId: UserId, passkeyId: Array[Byte], timestamp: Instant): Future[Unit]
+  def updateLastUsedTime(userId: UserId, passkeyId: PasskeyId, timestamp: Instant): Future[Unit]
 }

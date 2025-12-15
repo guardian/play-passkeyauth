@@ -13,7 +13,7 @@ package com.gu.playpasskeyauth.models
   *   extension (user: MyUser) def id: UserId = UserId(user.email)
   *
   * // Use the ID in repository operations:
-  * def loadPasskey(userId: UserId, passkeyId: Array[Byte]): Future[CredentialRecord]
+  * def loadPasskey(userId: UserId, passkeyId: PasskeyId): Future[CredentialRecord]
   *   }}}
   */
 opaque type UserId = String
@@ -23,11 +23,16 @@ object UserId:
   /** Creates a UserId from a string value.
     *
     * @param value
-    *   The string identifier for the user
+    *   The string identifier for the user (must not be empty or blank)
     * @return
     *   A type-safe UserId
+    * @throws IllegalArgumentException
+    *   if value is null, empty, or contains only whitespace or leading or trailing whitespace.
     */
-  def apply(value: String): UserId = value
+  def apply(value: String): UserId =
+    require(value.trim.nonEmpty, "UserId must not be empty or blank")
+    require(value.trim.length == value.length, "UserId must not have leading or trailing whitespace")
+    value
 
   /** Extension methods for UserId */
   extension (userId: UserId)

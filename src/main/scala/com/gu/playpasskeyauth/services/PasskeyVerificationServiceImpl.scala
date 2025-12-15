@@ -1,12 +1,11 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyName, PasskeyUser, UserId, WebAuthnConfig}
+import com.gu.playpasskeyauth.models.{HostApp, PasskeyId, PasskeyName, PasskeyUser, UserId, WebAuthnConfig}
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
 import com.webauthn4j.data.client.challenge.{Challenge, DefaultChallenge}
 import com.webauthn4j.server.ServerProperty
-import com.webauthn4j.util.Base64UrlUtil
 import play.api.libs.json.JsValue
 
 import java.time.Clock
@@ -114,7 +113,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     for {
       challenge <- challengeRepo.loadAuthenticationChallenge(user.id)
       authData <- Future.fromTry(Try(webAuthnManager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
-      credentialRecord <- passkeyRepo.loadPasskey(user.id, authData.getCredentialId)
+      credentialId = PasskeyId(authData.getCredentialId)
+      credentialRecord <- passkeyRepo.loadPasskey(user.id, credentialId)
       verifiedAuthData <- Future.fromTry(
         Try(
           webAuthnManager.verify(
@@ -128,19 +128,20 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
           )
         )
       )
+      verifiedCredentialId = PasskeyId(verifiedAuthData.getCredentialId)
       _ <- challengeRepo.deleteAuthenticationChallenge(user.id)
       _ <- passkeyRepo.updateAuthenticationCount(
         user.id,
-        verifiedAuthData.getCredentialId,
+        verifiedCredentialId,
         verifiedAuthData.getAuthenticatorData.getSignCount
       )
-      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedAuthData.getCredentialId, clock.instant())
+      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedCredentialId, clock.instant())
     } yield verifiedAuthData
 
-  private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor =
+  private def toDescriptor(passkeyId: PasskeyId): PublicKeyCredentialDescriptor =
     new PublicKeyCredentialDescriptor(
       config.credentialType,
-      Base64UrlUtil.decode(passkeyId),
+      passkeyId.bytes,
       config.transports.map(_.asJava).orNull
     )
 }
