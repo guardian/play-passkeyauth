@@ -33,7 +33,7 @@ class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationSer
 ) extends ActionFilter[[A] =>> RequestWithAuthenticationData[U, A]]
     with Logging {
 
-  def filter[A](request: RequestWithAuthenticationData[U, A]): Future[Option[Result]] =
+  def filter[A](request: RequestWithAuthenticationData[U, A]): Future[Option[Result]] = {
     val userId = request.user.id.value
     verifier
       .verify(request.user, request.authenticationData)
@@ -49,4 +49,5 @@ class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationSer
           logger.error(s"verify: $userId: Failure: ${e.getMessage}", e)
           Some(InternalServerError("Something went wrong"))
       }
+  }
 }

@@ -12,5 +12,6 @@ package com.gu.playpasskeyauth.models
   *   extension (user: MyUser) def id: UserId = UserId(user.email)
   * }}}
   */
-trait PasskeyUser[U]:
+trait PasskeyUser[U] {
   extension (user: U) def id: UserId
+}

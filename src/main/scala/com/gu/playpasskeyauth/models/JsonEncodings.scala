@@ -15,14 +15,13 @@ import play.api.libs.json.*
 
 object JsonEncodings {
 
-  given Writes[PublicKeyCredentialCreationOptions] with
-    def writes(options: PublicKeyCredentialCreationOptions): JsValue = Json.parse(mapper.writeValueAsString(options))
+  given Writes[PublicKeyCredentialCreationOptions] = Writes { options =>
+    Json.parse(mapper.writeValueAsString(options))
+  }
 
-  given Writes[PublicKeyCredentialRequestOptions] with
-    def writes(options: PublicKeyCredentialRequestOptions): JsValue = Json.parse(mapper.writeValueAsString(options))
+  given Writes[PublicKeyCredentialRequestOptions] = Writes { options => Json.parse(mapper.writeValueAsString(options)) }
 
-  given Writes[Unit] with
-    def writes(u: Unit): JsValue = JsNull
+  given Writes[Unit] = Writes { _ => JsNull }
 
   /*
    * As the webauthn library uses Jackson annotations to generate JSON encodings,

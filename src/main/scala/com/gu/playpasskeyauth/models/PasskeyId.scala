@@ -25,7 +25,7 @@ import play.api.libs.json.{JsString, Writes}
   */
 opaque type PasskeyId = Array[Byte]
 
-object PasskeyId:
+object PasskeyId {
 
   /** Creates a PasskeyId from raw bytes.
     *
@@ -36,9 +36,10 @@ object PasskeyId:
     * @throws IllegalArgumentException
     *   if bytes is null or empty
     */
-  def apply(bytes: Array[Byte]): PasskeyId =
+  def apply(bytes: Array[Byte]): PasskeyId = {
     require(bytes != null && bytes.nonEmpty, "PasskeyId must not be null or empty")
     bytes
+  }
 
   /** Creates a PasskeyId from a base64url-encoded string.
     *
@@ -49,14 +50,16 @@ object PasskeyId:
     * @throws IllegalArgumentException
     *   if encoded is null, empty, or not valid base64url
     */
-  def fromBase64Url(encoded: String): PasskeyId =
+  def fromBase64Url(encoded: String): PasskeyId = {
     require(encoded != null && encoded.nonEmpty, "PasskeyId base64url string must not be null or empty")
     Base64UrlUtil.decode(encoded)
+  }
 
   given Writes[PasskeyId] = Writes { id => JsString(id.toBase64Url) }
 
   /** Extension methods for PasskeyId */
-  extension (passkeyId: PasskeyId)
+  extension (passkeyId: PasskeyId) {
+
     /** Returns the underlying byte array.
       *
       * Use this when you need to pass the ID to the WebAuthn library or other APIs expecting raw bytes.
@@ -68,3 +71,5 @@ object PasskeyId:
       * Use this for storage in databases or transmission in JSON.
       */
     def toBase64Url: String = Base64UrlUtil.encodeToString(passkeyId)
+  }
+}

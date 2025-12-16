@@ -18,7 +18,7 @@ package com.gu.playpasskeyauth.models
   */
 opaque type UserId = String
 
-object UserId:
+object UserId {
 
   /** Creates a UserId from a string value.
     *
@@ -29,13 +29,15 @@ object UserId:
     * @throws IllegalArgumentException
     *   if value is null, empty, or contains only whitespace or leading or trailing whitespace.
     */
-  def apply(value: String): UserId =
+  def apply(value: String): UserId = {
     require(value.trim.nonEmpty, "UserId must not be empty or blank")
     require(value.trim.length == value.length, "UserId must not have leading or trailing whitespace")
     value
+  }
 
   /** Extension methods for UserId */
-  extension (userId: UserId)
+  extension (userId: UserId) {
+
     /** Returns the underlying string value.
       *
       * Use this when you need to pass the ID to external systems (e.g., database queries, JSON serialization).
@@ -47,3 +49,5 @@ object UserId:
       * Useful for WebAuthn operations that require byte arrays.
       */
     def bytes: Array[Byte] = userId.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+  }
+}

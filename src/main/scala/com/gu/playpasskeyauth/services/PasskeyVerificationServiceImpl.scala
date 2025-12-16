@@ -57,9 +57,10 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
   ): Future[CredentialRecord] =
     for {
       // Validate and sanitise the passkey name
-      validatedName <- PasskeyName.validate(passkeyName) match
+      validatedName <- PasskeyName.validate(passkeyName) match {
         case Right(name) => Future.successful(name)
         case Left(error) => Future.failed(PasskeyException(PasskeyError.InvalidName(error)))
+      }
       // Check for duplicate name (potential race condition - ideally handled at DB level)
       _ <- passkeyRepo
         .loadPasskeyNames(user.id)

@@ -18,7 +18,7 @@ import play.api.libs.json.{JsString, JsValue, Writes}
   */
 opaque type PasskeyName = String
 
-object PasskeyName:
+object PasskeyName {
 
   /** Maximum allowed length for passkey names */
   private val MaxLength: Int = 255
@@ -30,15 +30,17 @@ object PasskeyName:
   private val AllowedPattern = "^[\\p{L}\\p{N}\\s\\-_.,'()]+$".r
 
   /** Validation errors for passkey names */
-  enum ValidationError:
+  enum ValidationError {
     case Empty
     case TooLong(maxLength: Int)
     case InvalidCharacters
 
-    def message: String = this match
+    def message: String = this match {
       case Empty              => "Passkey name cannot be empty"
       case TooLong(maxLength) => s"Passkey name must not exceed $maxLength characters"
       case InvalidCharacters  => "Passkey name contains invalid characters"
+    }
+  }
 
   /** Validates a passkey name.
     *
@@ -47,12 +49,13 @@ object PasskeyName:
     * @return
     *   Either a validation error or the validated PasskeyName
     */
-  def validate(name: String): Either[ValidationError, PasskeyName] =
+  def validate(name: String): Either[ValidationError, PasskeyName] = {
     val trimmed = Option(name).map(_.trim).getOrElse("")
     if trimmed.isEmpty then Left(ValidationError.Empty)
     else if trimmed.length > MaxLength then Left(ValidationError.TooLong(MaxLength))
     else if !AllowedPattern.matches(trimmed) then Left(ValidationError.InvalidCharacters)
     else Right(trimmed)
+  }
 
   /** Checks if a passkey name is valid without returning the sanitised value.
     *
@@ -66,6 +69,9 @@ object PasskeyName:
   given Writes[PasskeyName] = Writes { name => JsString(name.value) }
 
   /** Extension methods for PasskeyName */
-  extension (name: PasskeyName)
+  extension (name: PasskeyName) {
+
     /** Returns the underlying string value */
     def value: String = name
+  }
+}
