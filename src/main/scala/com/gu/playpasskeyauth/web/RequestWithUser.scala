@@ -30,8 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
   * }
   *   }}}
   */
-class RequestWithUser[U, A](
-    val user: U,
+case class RequestWithUser[U, A](
+    user: U,
     request: Request[A]
 ) extends WrappedRequest[A](request)
 
@@ -91,5 +91,5 @@ class UserAction[U, R[A] <: Request[A]](
     extends ActionRefiner[R, [A] =>> RequestWithUser[U, A]] {
 
   protected def refine[A](request: R[A]): Future[Either[Result, RequestWithUser[U, A]]] =
-    Future.successful(Right(new RequestWithUser(userExtractor.extractUser(request), request)))
+    Future.successful(Right(RequestWithUser(userExtractor.extractUser(request), request)))
 }

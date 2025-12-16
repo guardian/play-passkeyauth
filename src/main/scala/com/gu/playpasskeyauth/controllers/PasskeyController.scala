@@ -1,8 +1,8 @@
 package com.gu.playpasskeyauth.controllers
 
 import com.gu.playpasskeyauth.models.JsonEncodings.given
-import com.gu.playpasskeyauth.models.PasskeyUser
-import com.gu.playpasskeyauth.services.PasskeyVerificationService
+import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyUser}
+import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.{RequestWithCreationData, RequestWithUser}
 import play.api.Logging
 import play.api.libs.json.Writes
@@ -123,6 +123,33 @@ class PasskeyController[U: PasskeyUser, B](
     apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(request.user))
   }
 
+  /** Lists all passkeys registered for the authenticated user.
+    *
+    * Returns a JSON array of passkey information including ID, name, creation time, and last used time.
+    *
+    * @return
+    *   A Play action that returns the list of passkeys as JSON, or an error response
+    */
+  def list: Action[Unit] = userAction.async(parse.empty) { request =>
+    apiResponse("list", request.user, passkeyService.listPasskeys(request.user))
+  }
+
+  /** Deletes a passkey for the authenticated user.
+    *
+    * @param passkeyIdBase64
+    *   The base64url-encoded passkey ID to delete
+    *
+    * @return
+    *   A Play action that returns NoContent on success, or an error response
+    */
+  def delete(passkeyIdBase64: String): Action[Unit] = userAction.async(parse.empty) { request =>
+    apiResponse(
+      "delete",
+      request.user,
+      passkeyService.deletePasskey(request.user, PasskeyId.fromBase64Url(passkeyIdBase64))
+    )
+  }
+
   private def apiResponse[A](action: String, user: U, fa: => Future[A])(using
       writer: Writes[A]
   ): Future[Result] = {
@@ -158,8 +185,8 @@ class PasskeyController[U: PasskeyUser, B](
 
   private def apiResponse(action: String, user: U, fresult: => Future[Result]): Future[Result] =
     fresult.recover {
-      case e: IllegalArgumentException =>
-        logger.error(s"$action: ${user.id}: Failure: ${e.getMessage}", e)
+      case e: PasskeyException =>
+        logger.warn(s"$action: ${user.id}: Domain error: ${e.getMessage}")
         BadRequest("Something went wrong")
       case e =>
         logger.error(s"$action: ${user.id}: Failure: ${e.getMessage}", e)

@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.filters
 
 import com.gu.playpasskeyauth.models.PasskeyUser
-import com.gu.playpasskeyauth.services.PasskeyVerificationService
+import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.RequestWithAuthenticationData
 import com.webauthn4j.data.AuthenticationData
 import play.api.Logging
@@ -34,20 +34,19 @@ class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationSer
     with Logging {
 
   def filter[A](request: RequestWithAuthenticationData[U, A]): Future[Option[Result]] =
-    apiResponse(verifier.verify(request.user, request.authenticationData))
-
-  private def apiResponse(auth: => Future[AuthenticationData]): Future[Option[Result]] =
-    auth
+    val userId = request.user.id.value
+    verifier
+      .verify(request.user, request.authenticationData)
       .map { _ =>
-        logger.info("Verified passkey")
+        logger.info(s"verify: $userId: Verified passkey")
         None
       }
       .recover {
-        case e: IllegalArgumentException =>
-          logger.error(e.getMessage, e)
+        case e: PasskeyException =>
+          logger.warn(s"verify: $userId: Domain error: ${e.getMessage}")
           Some(BadRequest("Something went wrong"))
         case e =>
-          logger.error(e.getMessage, e)
+          logger.error(s"verify: $userId: Failure: ${e.getMessage}", e)
           Some(InternalServerError("Something went wrong"))
       }
 }

@@ -9,8 +9,8 @@ package com.gu.playpasskeyauth.models
   * case class MyUser(email: String, name: String)
   *
   * given PasskeyUser[MyUser] with
-  *   extension (user: MyUser) def id: String = user.email
+  *   extension (user: MyUser) def id: UserId = UserId(user.email)
   * }}}
   */
 trait PasskeyUser[U]:
-  extension (user: U) def id: String
+  extension (user: U) def id: UserId

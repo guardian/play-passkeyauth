@@ -2,7 +2,7 @@ package com.gu.playpasskeyauth
 
 import com.gu.playpasskeyauth.controllers.PasskeyController
 import com.gu.playpasskeyauth.filters.PasskeyVerificationFilter
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser}
+import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser, WebAuthnConfig}
 import com.gu.playpasskeyauth.services.{
   PasskeyChallengeRepository,
   PasskeyRepository,
@@ -61,6 +61,10 @@ import scala.concurrent.ExecutionContext
   * @param registrationRedirect
   *   Where to redirect after successful passkey registration. Example: `routes.AccountController.settings()`
   *
+  * @param webAuthnConfig
+  *   Configuration for WebAuthn operations (algorithms, timeouts, etc.). Defaults to [[WebAuthnConfig.default]] which
+  *   is suitable for most applications.
+  *
   * @example
   *   {{{
   * // In your controller or module:
@@ -108,10 +112,11 @@ class PasskeyAuth[U: PasskeyUser, B](
     creationDataExtractor: CreationDataExtractor[[A] =>> RequestWithUser[U, A]],
     authenticationDataExtractor: AuthenticationDataExtractor[[A] =>> RequestWithUser[U, A]],
     passkeyNameExtractor: PasskeyNameExtractor[[A] =>> RequestWithUser[U, A]],
-    registrationRedirect: Call
+    registrationRedirect: Call,
+    webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
 )(using ExecutionContext) {
   private val verificationService: PasskeyVerificationService[U] =
-    new PasskeyVerificationServiceImpl[U](app, passkeyRepo, challengeRepo)
+    new PasskeyVerificationServiceImpl[U](app, passkeyRepo, challengeRepo, webAuthnConfig)
 
   /** Creates an action builder that verifies passkey authentication.
     *
@@ -146,6 +151,8 @@ class PasskeyAuth[U: PasskeyUser, B](
     *   - `creationOptions`: Generate options for `navigator.credentials.create()`
     *   - `register`: Register a new passkey credential
     *   - `authenticationOptions`: Generate options for `navigator.credentials.get()`
+    *   - `list`: List all passkeys for the user with metadata
+    *   - `delete(passkeyId)`: Delete a passkey by its base64url-encoded ID
     *
     * @return
     *   A configured [[PasskeyController]] instance
@@ -153,9 +160,11 @@ class PasskeyAuth[U: PasskeyUser, B](
     * @example
     *   {{{
     * // In your routes file:
-    * POST /passkey/creation-options  controllers.MyPasskeyController.creationOptions
-    * POST /passkey/register          controllers.MyPasskeyController.register
-    * POST /passkey/auth-options      controllers.MyPasskeyController.authenticationOptions
+    * POST   /passkey/creation-options  controllers.MyPasskeyController.creationOptions
+    * POST   /passkey/register          controllers.MyPasskeyController.register
+    * POST   /passkey/auth-options      controllers.MyPasskeyController.authenticationOptions
+    * GET    /passkey/list              controllers.MyPasskeyController.list
+    * DELETE /passkey/:id               controllers.MyPasskeyController.delete(id)
     *
     * // In your controller:
     * class MyPasskeyController @Inject()(passkeyAuth: PasskeyAuth[...]) {
@@ -163,11 +172,12 @@ class PasskeyAuth[U: PasskeyUser, B](
     *   def creationOptions = controller.creationOptions
     *   def register = controller.register
     *   def authenticationOptions = controller.authenticationOptions
+    *   def list = controller.list
+    *   def delete(id: String) = controller.delete(id)
     * }
     *   }}}
     */
   def controller(): PasskeyController[U, B] = {
-    val verificationFilter = new PasskeyVerificationFilter[U](verificationService)
     val creationDataAction = new CreationDataAction[U](creationDataExtractor, passkeyNameExtractor)
     val userAndCreationDataAction = userAction.andThen(creationDataAction)
     new PasskeyController[U, B](

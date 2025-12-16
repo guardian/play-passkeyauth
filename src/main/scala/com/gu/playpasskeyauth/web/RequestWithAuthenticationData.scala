@@ -27,9 +27,9 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param request
   *   The original Play request being wrapped
   */
-class RequestWithAuthenticationData[U, A](
-    val authenticationData: JsValue,
-    val user: U,
+case class RequestWithAuthenticationData[U, A](
+    authenticationData: JsValue,
+    user: U,
     request: Request[A]
 ) extends WrappedRequest[A](request)
 
@@ -89,7 +89,7 @@ class AuthenticationDataAction[U](
     authDataExtractor.findAuthenticationData(request) match {
       case Some(jsValue) =>
         Future.successful(
-          Right(new RequestWithAuthenticationData(jsValue, request.user, request))
+          Right(RequestWithAuthenticationData(jsValue, request.user, request))
         )
       case None => Future.successful(Left(BadRequest("Expected authentication data")))
     }

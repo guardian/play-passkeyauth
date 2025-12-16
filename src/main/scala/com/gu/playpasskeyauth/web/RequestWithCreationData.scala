@@ -31,10 +31,10 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param request
   *   The original Play request being wrapped
   */
-class RequestWithCreationData[U, A](
-    val passkeyName: String,
-    val creationData: JsValue,
-    val user: U,
+case class RequestWithCreationData[U, A](
+    passkeyName: String,
+    creationData: JsValue,
+    user: U,
     request: Request[A]
 ) extends WrappedRequest[A](request)
 
@@ -112,7 +112,7 @@ class CreationDataAction[U](
     (passkeyNameExtractor.findPasskeyName(request), creationDataExtractor.findCreationData(request)) match {
       case (Some(name), Some(jsValue)) =>
         Future.successful(
-          Right(new RequestWithCreationData(name, jsValue, request.user, request))
+          Right(RequestWithCreationData(name, jsValue, request.user, request))
         )
       case _ => Future.successful(Left(BadRequest("Expected creation data")))
     }

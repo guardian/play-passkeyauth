@@ -25,7 +25,6 @@ lazy val root = project
       "com.webauthn4j" % "webauthn4j-core" % "0.30.1.RELEASE",
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
-      // TODO remove
-      "com.gu.play-googleauth" %% "play-v30" % "30.1.0"
+      "org.scalatestplus" %% "scalacheck-1-18" % "3.2.19.0" % Test
     ) ++ safeTransitiveDependencies
   )

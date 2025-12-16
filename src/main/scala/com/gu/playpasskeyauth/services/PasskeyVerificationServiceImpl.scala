@@ -1,27 +1,15 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser}
+import com.gu.playpasskeyauth.models.{HostApp, PasskeyId, PasskeyInfo, PasskeyName, PasskeyUser, UserId, WebAuthnConfig}
 import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
-import com.webauthn4j.data.PublicKeyCredentialHints.{CLIENT_DEVICE, HYBRID, SECURITY_KEY}
-import com.webauthn4j.data.PublicKeyCredentialType.PUBLIC_KEY
-import com.webauthn4j.data.attestation.statement.COSEAlgorithmIdentifier
 import com.webauthn4j.data.client.challenge.{Challenge, DefaultChallenge}
-import com.webauthn4j.data.extension.client.{
-  AuthenticationExtensionClientInput,
-  AuthenticationExtensionsClientInputs,
-  RegistrationExtensionClientInput
-}
 import com.webauthn4j.server.ServerProperty
-import com.webauthn4j.util.Base64UrlUtil
 import play.api.libs.json.JsValue
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.time.Instant
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import scala.concurrent.duration.{Duration, SECONDS}
+import java.time.Clock
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
@@ -29,79 +17,36 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     app: HostApp,
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
-    generateChallenge: () => Challenge = () => new DefaultChallenge()
-) extends PasskeyVerificationService[U] {
+    config: WebAuthnConfig = WebAuthnConfig.default,
+    generateChallenge: () => Challenge = () => new DefaultChallenge(),
+    clock: Clock = Clock.systemUTC()
+)(using ExecutionContext)
+    extends PasskeyVerificationService[U] {
 
   private val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
 
-  private val userVerificationRequired = true
-  private val userVerification = UserVerificationRequirement.REQUIRED
-
   private val relyingParty = new PublicKeyCredentialRpEntity(app.host, app.name)
-
-  // In order of algorithms we prefer
-  private val publicKeyCredentialParameters = List(
-    // EdDSA for better security/performance in newer authenticators
-    new PublicKeyCredentialParameters(
-      PUBLIC_KEY,
-      COSEAlgorithmIdentifier.EdDSA
-    ),
-    // ES256 is widely supported and efficient
-    new PublicKeyCredentialParameters(
-      PUBLIC_KEY,
-      COSEAlgorithmIdentifier.ES256
-    ),
-    // RS256 for broader compatibility
-    new PublicKeyCredentialParameters(
-      PUBLIC_KEY,
-      COSEAlgorithmIdentifier.RS256
-    )
-  )
-
-  private val timeout = Duration(60, SECONDS)
-
-  private val authenticatorSelectionCriteria = {
-    // Allow the widest possible range of authenticators
-    val authenticatorAttachment: AuthenticatorAttachment = null
-    new AuthenticatorSelectionCriteria(
-      authenticatorAttachment,
-      // Don't allow passkeys unknown to the server to be discovered at authentication time
-      ResidentKeyRequirement.DISCOURAGED,
-      UserVerificationRequirement.REQUIRED
-    )
-  }
-
-  private val hints = Seq(CLIENT_DEVICE, SECURITY_KEY, HYBRID)
-
-  private val attestation = AttestationConveyancePreference.DIRECT
-
-  private val creationExtensions: AuthenticationExtensionsClientInputs[RegistrationExtensionClientInput] = null
-  private val authExtensions: AuthenticationExtensionsClientInputs[AuthenticationExtensionClientInput] = null
-
-  private val credType = PUBLIC_KEY
-
-  // TODO why is this hardcoded?
-  private val transports: Option[Set[AuthenticatorTransport]] = None
 
   def buildCreationOptions(user: U): Future[PublicKeyCredentialCreationOptions] =
     for {
       passkeyIds <- passkeyRepo.loadPasskeyIds(user.id)
       challenge = generateChallenge()
-      _ <- challengeRepo.insertRegistrationChallenge(user.id, challenge)
+      expiresAt = clock.instant().plusMillis(config.timeout.toMillis)
+      _ <- challengeRepo.insertRegistrationChallenge(user.id, challenge, expiresAt)
     } yield {
-      val userInfo = new PublicKeyCredentialUserEntity(user.id.getBytes(UTF_8), user.id, user.id)
+      val userInfo = new PublicKeyCredentialUserEntity(user.id.bytes, user.id.value, user.id.value)
       val excludeCredentials = passkeyIds.map(toDescriptor)
       new PublicKeyCredentialCreationOptions(
         relyingParty,
         userInfo,
         challenge,
-        publicKeyCredentialParameters.asJava,
-        timeout.toMillis,
+        config.publicKeyCredentialParameters.asJava,
+        config.timeout.toMillis,
         excludeCredentials.asJava,
-        authenticatorSelectionCriteria,
-        hints.asJava,
-        attestation,
-        creationExtensions
+        config.authenticatorSelectionCriteria,
+        config.hints.asJava,
+        config.attestation,
+        config.creationExtensions.orNull
       )
     }
 
@@ -111,16 +56,18 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
       creationResponse: JsValue
   ): Future[CredentialRecord] =
     for {
-      // There's a potential race condition here if another request conflicts with it so would be better at DB level - but leaving it here for now
+      // Validate and sanitise the passkey name
+      validatedName <- PasskeyName.validate(passkeyName) match
+        case Right(name) => Future.successful(name)
+        case Left(error) => Future.failed(PasskeyException(PasskeyError.InvalidName(error)))
+      // Check for duplicate name (potential race condition - ideally handled at DB level)
       _ <- passkeyRepo
         .loadPasskeyNames(user.id)
-        .flatMap(names => {
-          if (names.contains(passkeyName)) {
-            Future.failed(new IllegalArgumentException(s"A passkey with the name '$passkeyName' already exists."))
-          } else {
-            Future.successful(())
-          }
-        })
+        .flatMap(names =>
+          if names.contains(validatedName.value) then
+            Future.failed(PasskeyException(PasskeyError.DuplicateName(validatedName.value)))
+          else Future.successful(())
+        )
       challenge <- challengeRepo.loadRegistrationChallenge(user.id)
       verified <- Future.fromTry(
         Try(
@@ -128,8 +75,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
             creationResponse.toString,
             new RegistrationParameters(
               ServerProperty.builder.origin(app.origin).rpId(app.host).challenge(challenge).build(),
-              publicKeyCredentialParameters.asJava,
-              userVerificationRequired
+              config.publicKeyCredentialParameters.asJava,
+              config.userVerificationRequired
             )
           )
         )
@@ -140,7 +87,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         verified.getClientExtensions,
         verified.getTransports
       )
-      _ <- passkeyRepo.insertPasskey(user.id, passkeyName, credentialRecord)
+      _ <- passkeyRepo.insertPasskey(user.id, validatedName.value, credentialRecord)
       _ <- challengeRepo.deleteRegistrationChallenge(user.id)
     } yield credentialRecord
 
@@ -148,18 +95,19 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     for {
       passkeyIds <- passkeyRepo.loadPasskeyIds(user.id)
       challenge = generateChallenge()
-      _ <- challengeRepo.insertAuthenticationChallenge(user.id, challenge)
+      expiresAt = clock.instant().plusMillis(config.timeout.toMillis)
+      _ <- challengeRepo.insertAuthenticationChallenge(user.id, challenge, expiresAt)
     } yield {
       val rpId = app.host
       val allowCredentials = passkeyIds.map(toDescriptor)
       new PublicKeyCredentialRequestOptions(
         challenge,
-        timeout.toMillis,
+        config.timeout.toMillis,
         rpId,
         allowCredentials.asJava,
-        userVerification,
-        hints.asJava,
-        authExtensions
+        config.userVerification,
+        config.hints.asJava,
+        config.authExtensions.orNull
       )
     }
 
@@ -167,7 +115,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
     for {
       challenge <- challengeRepo.loadAuthenticationChallenge(user.id)
       authData <- Future.fromTry(Try(webAuthnManager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
-      credentialRecord <- passkeyRepo.loadPasskey(user.id, authData.getCredentialId)
+      credentialId = PasskeyId(authData.getCredentialId)
+      credentialRecord <- passkeyRepo.loadPasskey(user.id, credentialId)
       verifiedAuthData <- Future.fromTry(
         Try(
           webAuthnManager.verify(
@@ -176,26 +125,31 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
               ServerProperty.builder.origin(app.origin).rpId(app.host).challenge(challenge).build(),
               credentialRecord,
               List(authData.getCredentialId).asJava,
-              userVerificationRequired
+              config.userVerificationRequired
             )
           )
         )
       )
+      verifiedCredentialId = PasskeyId(verifiedAuthData.getCredentialId)
       _ <- challengeRepo.deleteAuthenticationChallenge(user.id)
       _ <- passkeyRepo.updateAuthenticationCount(
         user.id,
-        verifiedAuthData.getCredentialId,
+        verifiedCredentialId,
         verifiedAuthData.getAuthenticatorData.getSignCount
       )
-      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedAuthData.getCredentialId, Instant.now())
+      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedCredentialId, clock.instant())
     } yield verifiedAuthData
 
-  private def toDescriptor(passkeyId: String): PublicKeyCredentialDescriptor = {
-    val id = Base64UrlUtil.decode(passkeyId)
+  def listPasskeys(user: U): Future[List[PasskeyInfo]] =
+    passkeyRepo.listPasskeys(user.id)
+
+  def deletePasskey(user: U, passkeyId: PasskeyId): Future[Unit] =
+    passkeyRepo.deletePasskey(user.id, passkeyId)
+
+  private def toDescriptor(passkeyId: PasskeyId): PublicKeyCredentialDescriptor =
     new PublicKeyCredentialDescriptor(
-      credType,
-      id,
-      transports.map(_.asJava).orNull
+      config.credentialType,
+      passkeyId.bytes,
+      config.transports.map(_.asJava).orNull
     )
-  }
 }
