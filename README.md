@@ -12,36 +12,9 @@ A library that integrates [webauthn4j](https://github.com/webauthn4j/webauthn4j)
 providing the server-side registration and verification services of 
 the [Web Authentication standard](https://www.passkeys.com/what-is-webauthn).
 
-## Why use this library?
-
-The benefits of using this library over integrating webauthn4j directly include:
-
-### Simplified Integration
-Pre-built Play Framework components provide ready-to-use controllers and action builders that integrate directly with 
-Play's routing and request handling, eliminating boilerplate.
-Storage abstraction defines clear interfaces (PasskeyRepository, PasskeyChallengeRepository) so you only implement 
-storage logic without worrying about WebAuthn protocol details.
-
-### Reduced Complexity
-WebAuthn protocol handling manages the complex challenge-response flow, credential creation, and verification 
-automatically.
-Type-safe abstractions wrap webauthn4j's Java APIs in idiomatic Scala, providing better type safety and reducing the 
-risk of implementation errors.
-
-### Standardized Implementation
-Implements WebAuthn security requirements correctly (challenge generation, origin validation, credential storage) 
-following industry standards.
-The verification action can be composed with other Play action builders, fitting naturally into existing authentication 
-workflows.
-
-### Reduced Development Time
-Instead of writing controllers, challenge management, and credential verification from scratch, you implement only your 
-storage layer.
-Spend time on your app-specific requirements rather than learning WebAuthn protocol intricacies.
-
 ## Structure
 
-The library provides a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala) class, which gives you:
+This library provides a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala) class, which gives you:
 1. a verification action that can be composed with other action builders
 2. a controller that can be included in a Play routes file to perform [standard passkey operations](Passkeys.md).
 
@@ -64,19 +37,6 @@ libraryDependencies += "com.gu" %% "play-passkey-auth" % "<version>"
 6. Implement a [PasskeyNameExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).
 7. Implement a [UserExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithUser.scala).
 8. Pass these as arguments into a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala).
-
-### Defining a PasskeyUser
-
-The library is generic over your user type. You need to provide a `PasskeyUser` type class instance that defines how to extract an identifier from your user:
-
-```scala
-import com.gu.playpasskeyauth.models.PasskeyUser
-
-case class MyUser(email: String, name: String)
-
-given PasskeyUser[MyUser] with
-  extension (user: MyUser) def id: String = user.email
-```
 
 ## Integration examples
  show actual Scala/Play code
