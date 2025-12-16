@@ -1,4 +1,5 @@
 package com.gu.playpasskeyauth.models
+import play.api.libs.json.{JsString, JsValue, Writes}
 
 /** Validated and sanitised passkey name.
   *
@@ -61,6 +62,8 @@ object PasskeyName:
     *   true if valid, false otherwise
     */
   def isValid(name: String): Boolean = validate(name).isRight
+
+  given Writes[PasskeyName] = Writes { name => JsString(name.value) }
 
   /** Extension methods for PasskeyName */
   extension (name: PasskeyName)

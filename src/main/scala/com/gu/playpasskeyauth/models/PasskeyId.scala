@@ -1,6 +1,7 @@
 package com.gu.playpasskeyauth.models
 
 import com.webauthn4j.util.Base64UrlUtil
+import play.api.libs.json.{JsString, Writes}
 
 /** Type-safe wrapper for passkey (credential) identifiers.
   *
@@ -51,6 +52,8 @@ object PasskeyId:
   def fromBase64Url(encoded: String): PasskeyId =
     require(encoded != null && encoded.nonEmpty, "PasskeyId base64url string must not be null or empty")
     Base64UrlUtil.decode(encoded)
+
+  given Writes[PasskeyId] = Writes { id => JsString(id.toBase64Url) }
 
   /** Extension methods for PasskeyId */
   extension (passkeyId: PasskeyId)

@@ -1,5 +1,7 @@
 package com.gu.playpasskeyauth.models
 
+import play.api.libs.json.{JsObject, JsValue, Json, Writes}
+
 import java.time.Instant
 
 /** Information about a registered passkey for display in user interfaces.
@@ -17,7 +19,11 @@ import java.time.Instant
   */
 case class PasskeyInfo(
     id: PasskeyId,
-    name: String,
+    name: PasskeyName,
     createdAt: Instant,
     lastUsedAt: Option[Instant]
 )
+
+object PasskeyInfo {
+  given Writes[PasskeyInfo] = Json.writes[PasskeyInfo]
+}
