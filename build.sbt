@@ -1,4 +1,4 @@
-val playVersion = "3.0.9"
+val playVersion = "3.0.10"
 
 /*
  * To test whether any of these entries are redundant:
