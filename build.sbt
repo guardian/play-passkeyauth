@@ -1,3 +1,6 @@
+import ReleaseTransformations.*
+import sbtversionpolicy.withsbtrelease.ReleaseVersion
+
 val playVersion = "3.0.10"
 
 /*
@@ -16,12 +19,12 @@ lazy val root = project
     licenses := Seq(License.Apache2),
     organization := "com.gu",
     name := "play-passkeyauth",
-    version := "0.1.32-SNAPSHOT",
     scalaVersion := "3.3.7",
     scalacOptions ++= Seq(
       "-deprecation",
       "-explain",
       "-no-indent",
+      "-release:11",
       "-Werror"
     ),
     scalafmtOnCompile := true,
@@ -31,5 +34,17 @@ lazy val root = project
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
       "org.scalatestplus" %% "scalacheck-1-18" % "3.2.19.0" % Test
-    ) ++ safeTransitiveDependencies
+    ) ++ safeTransitiveDependencies,
+    releaseVersion := ReleaseVersion.fromAggregatedAssessedCompatibilityWithLatestRelease().value,
+    releaseProcess := Seq[ReleaseStep](
+      checkSnapshotDependencies,
+      inquireVersions,
+      runClean,
+      runTest,
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      setNextVersion,
+      commitNextVersion
+    )
   )
