@@ -15,8 +15,10 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v6.0.1
-      - uses: guardian/setup-scala@v1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: guardian/setup-scala@cc7b39e238d789370aa98fa5f07e609b6527657d # v1.1.0
+      
       - run: >
           sbt
           compile 
