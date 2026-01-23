@@ -9,9 +9,15 @@ val playVersion = "3.0.10"
  * 2. Run `sbt Runtime/dependencyList`
  * 3. If no earlier version appears in the dependency list, the entry can be removed.
  */
-val safeTransitiveDependencies = Seq(
-  "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.20.1" % Runtime
-)
+val safeTransitiveDependencies = {
+  val jacksonVersion = "2.21.0"
+  Seq(
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonVersion % Runtime,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion % Runtime,
+    "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion % Runtime,
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion % Runtime
+  )
+}
 
 lazy val root = project
   .in(file("."))
