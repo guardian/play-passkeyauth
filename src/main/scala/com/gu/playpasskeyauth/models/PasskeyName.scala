@@ -42,6 +42,8 @@ object PasskeyName {
     }
   }
 
+  def apply(name: String): PasskeyName = name
+
   /** Validates a passkey name.
     *
     * @param name
