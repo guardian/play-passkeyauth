@@ -2,7 +2,7 @@ package com.gu.playpasskeyauth
 
 import com.gu.playpasskeyauth.controllers.PasskeyController
 import com.gu.playpasskeyauth.filters.PasskeyVerificationFilter
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser, WebAuthnConfig}
+import com.gu.playpasskeyauth.models.{HostApp, UserIdExtractor, WebAuthnConfig}
 import com.gu.playpasskeyauth.services.{
   PasskeyChallengeRepository,
   PasskeyRepository,
@@ -21,12 +21,12 @@ import scala.concurrent.ExecutionContext
   * action builders for protecting routes.
   *
   * @tparam U
-  *   The user type, which must have a [[PasskeyUser]] type class instance. all methods to extract user IDs. You must
-  *   define this type class before creating a PasskeyAuth instance:
+  *   The user type for which a [[UserIdExtractor]] must be available. You must provide an implicit function to extract
+  *   user IDs:
   *   {{{
   * case class MyUser(email: String, name: String)
-  *   given PasskeyUser[MyUser] with
-  *     extension (user: MyUser) def id: UserId = UserId(user.email)
+  * given UserIdExtractor[MyUser] = user => UserId(user.email)
+  *   }}}
   *
   * @tparam B
   *   The body content type (typically `AnyContent`)
@@ -108,7 +108,7 @@ import scala.concurrent.ExecutionContext
   * }
   *   }}}
   */
-class PasskeyAuth[U: PasskeyUser, B](
+class PasskeyAuth[U, B](
     controllerComponents: ControllerComponents,
     app: HostApp,
     userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
@@ -118,10 +118,11 @@ class PasskeyAuth[U: PasskeyUser, B](
     authenticationDataExtractor: AuthenticationDataExtractor[[A] =>> RequestWithUser[U, A]],
     passkeyNameExtractor: PasskeyNameExtractor[[A] =>> RequestWithUser[U, A]],
     registrationRedirect: Call,
+    getUserName: U => String = (u: U) => "", // Function to extract display name from user
     webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
-)(using ExecutionContext) {
-  private val verificationService: PasskeyVerificationService[U] =
-    new PasskeyVerificationServiceImpl[U](app, passkeyRepo, challengeRepo, webAuthnConfig)
+)(using UserIdExtractor[U], ExecutionContext) {
+  private val verificationService: PasskeyVerificationService =
+    new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo, webAuthnConfig)
 
   /** Creates an action builder that verifies passkey authentication.
     *
@@ -190,7 +191,8 @@ class PasskeyAuth[U: PasskeyUser, B](
       verificationService,
       userAction,
       userAndCreationDataAction,
-      registrationRedirect
+      registrationRedirect,
+      getUserName
     )
   }
 }

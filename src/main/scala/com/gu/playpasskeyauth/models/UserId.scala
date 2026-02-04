@@ -4,7 +4,7 @@ package com.gu.playpasskeyauth.models
   *
   * User IDs are strings that uniquely identify users in the passkey system.
   *
-  * This type is obtained from a user via the [[PasskeyUser]] type class.
+  * This type is obtained from a user via the [[UserIdExtractor]] function type.
   *
   * @param value
   *   The string identifier for the user (must not be empty or blank)
@@ -12,9 +12,8 @@ package com.gu.playpasskeyauth.models
   *   if value is null, empty, or contains only whitespace or leading or trailing whitespace.
   * @example
   *   {{{
-  * // Given a PasskeyUser instance for your user type:
-  * given PasskeyUser[MyUser] with
-  *   extension (user: MyUser) def id: UserId = UserId(user.email)
+  * // Given a UserIdExtractor for your user type:
+  * given UserIdExtractor[MyUser] = user => UserId(user.email)
   *
   * // Use the ID in repository operations:
   * def loadPasskey(userId: UserId, passkeyId: PasskeyId): Future[CredentialRecord]
@@ -33,25 +32,24 @@ case class UserId(value: String) {
 
 object UserId {
 
-  /** Creates a UserId from a user by extracting its identifier using the PasskeyUser type class.
+  /** Creates a UserId from a user by extracting its identifier using a UserIdExtractor.
     *
     * @param user
     *   The user instance from which to extract the identifier
-    * @param passKeyUser
-    *   The PasskeyUser instance for the user type (resolved implicitly)
+    * @param extractor
+    *   The extractor function (resolved implicitly)
     * @return
     *   A type-safe UserId extracted from the user
     * @example
     *   {{{
     * case class MyUser(email: String, name: String)
     *
-    * given PasskeyUser[MyUser] with
-    *   extension (user: MyUser) def id: UserId = UserId(user.email)
+    * given UserIdExtractor[MyUser] = user => UserId(user.email)
     *
     * val user = MyUser("alice@example.com", "Alice")
-    * val userId = UserId.from(user)  // Uses the PasskeyUser instance to extract the ID
+    * val userId = UserId.from(user)  // Uses the UserIdExtractor to extract the ID
     *   }}}
     */
-  def from[U](user: U)(using passKeyUser: PasskeyUser[U]): UserId =
-    user.id
+  def from[U](user: U)(using extractor: UserIdExtractor[U]): UserId =
+    extractor(user)
 }
