@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.controllers
 
 import com.gu.playpasskeyauth.models.JsonEncodings.given
-import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyUser}
+import com.gu.playpasskeyauth.models.{PasskeyId, UserIdExtractor}
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.{RequestWithCreationData, RequestWithUser}
 import play.api.Logging
@@ -18,8 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
   *   - Generating authentication options for verifying passkeys
   *
   * @tparam U
-  *   The user type, which must have a [[PasskeyUser]] type class instance. For example,
-  *   `case class MyUser(email: String, name: String)` with an appropriate `given PasskeyUser[MyUser]` in scope.
+  *   The user type for which a [[UserIdExtractor]] must be available.
   *
   * @tparam B
   *   The body content type for the registration action. This is typically the parsed request body type (e.g.,
@@ -33,30 +32,30 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * @param userAction
   *   An action builder that extracts the user from the request. This transforms a standard request into a
-  *   [[RequestWithUser]] containing the authenticated user. Example implementation:
-  *   {{{
-  *     // Assuming you have a base action that provides authentication
-  *     val userAction = authAction.andThen(new UserAction(myUserExtractor))
-  *   }}}
+  *   [[RequestWithUser]] containing the authenticated user.
   *
   * @param creationDataAction
   *   An action builder that extracts both the user and the passkey creation data from the request. The creation data
-  *   comes from the browser's `navigator.credentials.create()` call. Example:
-  *   {{{
-  *     val creationDataAction = userAction.andThen(new CreationDataAction(creationDataExtractor, passkeyNameExtractor))
-  *   }}}
+  *   comes from the browser's `navigator.credentials.create()` call.
   *
   * @param registrationRedirect
   *   The [[Call]] to redirect to after successful passkey registration. For example:
   *   `routes.DashboardController.index()` or `Call("GET", "/dashboard")`
+  *
+  * @param userIdExtractor
+  *   Function to extract UserId from the user type (resolved implicitly)
+  *
+  * @param getUserName
+  *   Function to extract display name from the user type for WebAuthn
   */
-class PasskeyController[U: PasskeyUser, B](
+class PasskeyController[U, B](
     controllerComponents: ControllerComponents,
-    passkeyService: PasskeyVerificationService[U],
+    passkeyService: PasskeyVerificationService,
     userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
     creationDataAction: ActionBuilder[[A] =>> RequestWithCreationData[U, A], B],
-    registrationRedirect: Call
-)(using val executionContext: ExecutionContext)
+    registrationRedirect: Call,
+    getUserName: U => String = (u: U) => "" // Default to empty string, can be overridden
+)(using userIdExtractor: UserIdExtractor[U], val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
 
@@ -75,10 +74,12 @@ class PasskeyController[U: PasskeyUser, B](
     *   A Play action that returns the creation options as JSON, or an error response
     */
   def creationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
+    val userId = userIdExtractor(request.user)
+    val userName = getUserName(request.user)
     apiResponse(
       "creationOptions",
       request.user,
-      passkeyService.buildCreationOptions(request.user)
+      passkeyService.buildCreationOptions(userId, userName)
     )
   }
 
@@ -98,11 +99,12 @@ class PasskeyController[U: PasskeyUser, B](
     *   A Play action that redirects on success, or returns an error response
     */
   def register: Action[B] = creationDataAction.async { request =>
+    val userId = userIdExtractor(request.user)
     apiRedirectResponse(
       "register",
       request.user,
       registrationRedirect,
-      passkeyService.register(request.user, request.passkeyName, request.creationData).map(_ => ())
+      passkeyService.register(userId, request.passkeyName, request.creationData).map(_ => ())
     )
   }
 
@@ -120,7 +122,8 @@ class PasskeyController[U: PasskeyUser, B](
     *   A Play action that returns the authentication options as JSON, or an error response
     */
   def authenticationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
-    apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(request.user))
+    val userId = userIdExtractor(request.user)
+    apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(userId))
   }
 
   /** Lists all passkeys registered for the authenticated user.
@@ -131,7 +134,8 @@ class PasskeyController[U: PasskeyUser, B](
     *   A Play action that returns the list of passkeys as JSON, or an error response
     */
   def list: Action[Unit] = userAction.async(parse.empty) { request =>
-    apiResponse("list", request.user, passkeyService.listPasskeys(request.user))
+    val userId = userIdExtractor(request.user)
+    apiResponse("list", request.user, passkeyService.listPasskeys(userId))
   }
 
   /** Deletes a passkey for the authenticated user.
@@ -143,25 +147,27 @@ class PasskeyController[U: PasskeyUser, B](
     *   A Play action that returns NoContent on success, or an error response
     */
   def delete(passkeyIdBase64: String): Action[Unit] = userAction.async(parse.empty) { request =>
+    val userId = userIdExtractor(request.user)
     apiResponse(
       "delete",
       request.user,
-      passkeyService.deletePasskey(request.user, PasskeyId.fromBase64Url(passkeyIdBase64))
+      passkeyService.deletePasskey(userId, PasskeyId.fromBase64Url(passkeyIdBase64))
     )
   }
 
   private def apiResponse[A](action: String, user: U, fa: => Future[A])(using
       writer: Writes[A]
   ): Future[Result] = {
+    val userId = userIdExtractor(user)
     apiResponse(
       action,
       user,
       fa.map {
         case () =>
-          logger.info(s"$action: ${user.id}: Success")
+          logger.info(s"$action: $userId: Success")
           NoContent
         case a =>
-          logger.info(s"$action: ${user.id}: Success")
+          logger.info(s"$action: $userId: Success")
           Ok(writer.writes(a))
       }
     )
@@ -173,23 +179,26 @@ class PasskeyController[U: PasskeyUser, B](
       redirect: Call,
       fa: => Future[A]
   ): Future[Result] = {
+    val userId = userIdExtractor(user)
     apiResponse(
       action,
       user,
       fa.map { _ =>
-        logger.info(s"$action: ${user.id}: Success")
+        logger.info(s"$action: $userId: Success")
         Redirect(redirect)
       }
     )
   }
 
-  private def apiResponse(action: String, user: U, fresult: => Future[Result]): Future[Result] =
+  private def apiResponse(action: String, user: U, fresult: => Future[Result]): Future[Result] = {
+    val userId = userIdExtractor(user)
     fresult.recover {
       case e: PasskeyException =>
-        logger.warn(s"$action: ${user.id}: Domain error: ${e.getMessage}")
+        logger.warn(s"$action: $userId: Domain error: ${e.getMessage}")
         BadRequest("Something went wrong")
       case e =>
-        logger.error(s"$action: ${user.id}: Failure: ${e.getMessage}", e)
+        logger.error(s"$action: $userId: Failure: ${e.getMessage}", e)
         InternalServerError("Something went wrong")
     }
+  }
 }

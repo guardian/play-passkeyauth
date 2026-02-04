@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyInfo, PasskeyUser}
+import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyInfo, UserId}
 import com.webauthn4j.credential.CredentialRecord
 import com.webauthn4j.data.{AuthenticationData, PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions}
 import play.api.libs.json.JsValue
@@ -13,27 +13,26 @@ import scala.concurrent.Future
   * This includes generating challenges, validating credentials, and storing credential data.
   *
   * The standard implementation is provided by [[PasskeyVerificationServiceImpl]].
-  *
-  * @tparam U
-  *   The user type, which must have a [[PasskeyUser]] type class instance.
   */
-trait PasskeyVerificationService[U: PasskeyUser] {
+trait PasskeyVerificationService {
 
   /** Builds the options needed for creating a new passkey credential in the browser.
     *
-    * @param user
-    *   The user for whom to generate creation options
+    * @param userId
+    *   The user ID for whom to generate creation options
+    * @param userName
+    *   The user's display name for WebAuthn
     *
     * @return
     *   A Future containing [[com.webauthn4j.data.PublicKeyCredentialCreationOptions]] to be passed to
     *   `navigator.credentials.create()` in the browser
     */
-  def buildCreationOptions(user: U): Future[PublicKeyCredentialCreationOptions]
+  def buildCreationOptions(userId: UserId, userName: String): Future[PublicKeyCredentialCreationOptions]
 
   /** Registers a new passkey credential for the user.
     *
-    * @param user
-    *   The user registering the passkey
+    * @param userId
+    *   The user ID registering the passkey
     *
     * @param passkeyName
     *   A human-readable name for this passkey
@@ -44,22 +43,22 @@ trait PasskeyVerificationService[U: PasskeyUser] {
     * @return
     *   A Future containing the registered [[com.webauthn4j.credential.CredentialRecord]]
     */
-  def register(user: U, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
+  def register(userId: UserId, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
 
   /** Lists all passkeys registered for the user.
     *
-    * @param user
-    *   The user whose passkeys to list
+    * @param userId
+    *   The user ID whose passkeys to list
     *
     * @return
     *   A Future containing a list of [[PasskeyInfo]] with metadata about each passkey
     */
-  def listPasskeys(user: U): Future[List[PasskeyInfo]]
+  def listPasskeys(userId: UserId): Future[List[PasskeyInfo]]
 
   /** Deletes a passkey for the user.
     *
-    * @param user
-    *   The user who owns the passkey
+    * @param userId
+    *   The user ID who owns the passkey
     *
     * @param passkeyId
     *   The ID of the passkey to delete
@@ -67,31 +66,29 @@ trait PasskeyVerificationService[U: PasskeyUser] {
     * @return
     *   A Future that completes when the passkey is deleted
     */
-  def deletePasskey(user: U, passkeyId: PasskeyId): Future[Unit]
+  def deletePasskey(userId: UserId, passkeyId: PasskeyId): Future[Unit]
 
-  /** Builds the options needed for authenticating with an existing passkey.
+  /** Builds the options needed for authenticating with a passkey in the browser.
     *
-    * @param user
-    *   The user attempting to authenticate
+    * @param userId
+    *   The user ID for whom to generate authentication options
     *
     * @return
     *   A Future containing [[com.webauthn4j.data.PublicKeyCredentialRequestOptions]] to be passed to
     *   `navigator.credentials.get()` in the browser
     */
-  def buildAuthenticationOptions(user: U): Future[PublicKeyCredentialRequestOptions]
+  def buildAuthenticationOptions(userId: UserId): Future[PublicKeyCredentialRequestOptions]
 
-  /** Verifies the given authentication response with the data stored by the relying party. Also updates the stored data
-    * to keep it current. The signature counter and the last used timestamp will be updated following successful
-    * verification.
+  /** Verifies a passkey authentication attempt.
     *
-    * @param user
-    *   The user attempting to authenticate
+    * @param userId
+    *   The user ID attempting authentication
     *
     * @param authenticationResponse
-    *   The JSON response from `navigator.credentials.get()` in the browser.
+    *   The JSON response from `navigator.credentials.get()` in the browser
     *
     * @return
-    *   A Future containing [[com.webauthn4j.data.AuthenticationData]] upon successful verification
+    *   A Future containing the verified [[com.webauthn4j.data.AuthenticationData]]
     */
-  def verify(user: U, authenticationResponse: JsValue): Future[AuthenticationData]
+  def verify(userId: UserId, authenticationResponse: JsValue): Future[AuthenticationData]
 }
