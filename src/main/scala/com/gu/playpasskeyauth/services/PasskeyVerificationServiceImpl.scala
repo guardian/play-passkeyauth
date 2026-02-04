@@ -91,8 +91,8 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
       passkeyId = PasskeyId(
         verified.getAttestationObject.getAuthenticatorData.getAttestedCredentialData.getCredentialId
       )
-      newPasskey = Passkey.fromRegistration(passkeyId, validatedName, credentialRecord)
-      _ <- passkeyRepo.save(userId, newPasskey)
+      newPasskey = Passkey.fromRegistration(passkeyId, validatedName, credentialRecord, clock)
+      _ <- passkeyRepo.upsert(userId, newPasskey)
       _ <- challengeRepo.deleteRegistrationChallenge(userId)
     } yield credentialRecord
 
@@ -140,7 +140,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
       newSignCount = verifiedAuthData.getAuthenticatorData.getSignCount
       updatedPasskey = passkey.recordAuthentication(newSignCount, clock)
       _ <- challengeRepo.deleteAuthenticationChallenge(userId)
-      _ <- passkeyRepo.save(userId, updatedPasskey)
+      _ <- passkeyRepo.upsert(userId, updatedPasskey)
     } yield verifiedAuthData
 
   def listPasskeys(userId: UserId): Future[List[PasskeyInfo]] =
