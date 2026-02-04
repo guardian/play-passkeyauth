@@ -13,28 +13,72 @@ import com.webauthn4j.data.{
 import com.webauthn4j.util.Base64UrlUtil
 import play.api.libs.json.*
 
+/** JSON encoding utilities for WebAuthn/passkey data structures.
+  *
+  * This object provides conversion methods between Java objects (from WebAuthn4j library), Jackson JSON, and Play JSON.
+  * The WebAuthn4j library uses Jackson annotations, so we leverage Jackson's ObjectMapper for serialization with custom
+  * serializers to ensure the output matches the WebAuthn specification requirements.
+  */
 object JsonEncodings {
 
+  // Play JSON Writes for controller responses
   given Writes[PublicKeyCredentialCreationOptions] = Writes { options =>
-    Json.parse(mapper.writeValueAsString(options))
+    toPlayJson(options)
   }
 
-  given Writes[PublicKeyCredentialRequestOptions] = Writes { options => Json.parse(mapper.writeValueAsString(options)) }
+  given Writes[PublicKeyCredentialRequestOptions] = Writes { options =>
+    toPlayJson(options)
+  }
 
   given Writes[Unit] = Writes { _ => JsNull }
 
-  /*
-   * As the webauthn library uses Jackson annotations to generate JSON encodings,
-   * we might as well use them instead of generating our own JSON models.
-   * This will help with futureproofing.
-   */
+  /** Convert any object to a JSON string using Jackson.
+    *
+    * This is useful for serializing WebAuthn4j objects that have Jackson annotations.
+    *
+    * @param obj
+    *   The object to serialize
+    * @return
+    *   JSON string representation
+    */
+  def toJson(obj: Any): String = mapper.writeValueAsString(obj)
+
+  /** Convert any object to Play JSON.
+    *
+    * This first converts to a Jackson JSON string, then parses it as Play JSON.
+    *
+    * @param obj
+    *   The object to serialize
+    * @return
+    *   Play JSON value
+    */
+  def toPlayJson(obj: Any): JsValue = Json.parse(toJson(obj))
+
+  /** Parse a JSON string to a specific type using Jackson.
+    *
+    * @param json
+    *   The JSON string to parse
+    * @param clazz
+    *   The target class type
+    * @tparam T
+    *   The type to deserialize to
+    * @return
+    *   Deserialized object
+    */
+  def fromJson[T](json: String, clazz: Class[T]): T =
+    mapper.readValue(json, clazz)
+
+  /** Jackson ObjectMapper configured for WebAuthn/passkey serialization.
+    *
+    * This mapper includes custom serializers to ensure WebAuthn data structures are serialized according to the
+    * WebAuthn specification (e.g., base64url encoding for binary data).
+    */
   private val mapper: ObjectMapper = {
     val mapper = new ObjectMapper()
     val module = new SimpleModule()
-    /*
-     * Serialize just the value of the challenge instead of a nested object.
-     * Not sure why this hasn't been encoded in the form the webauthn spec expects.
-     */
+
+    // Custom serializer for Challenge - serialize as base64url string instead of nested object
+    // The WebAuthn spec expects challenge to be a base64url-encoded string
     module.addSerializer(
       classOf[DefaultChallenge],
       new JsonSerializer[DefaultChallenge] {
@@ -46,9 +90,9 @@ object JsonEncodings {
           gen.writeString(Base64UrlUtil.encodeToString(challenge.getValue))
       }
     )
-    /*
-     * Serialize so that id is base64url encoded, as the webauthn spec demands.
-     */
+
+    // Custom serializer for PublicKeyCredentialUserEntity - encode user ID as base64url
+    // The WebAuthn spec requires user.id to be base64url-encoded
     module.addSerializer(
       classOf[PublicKeyCredentialUserEntity],
       new JsonSerializer[PublicKeyCredentialUserEntity] {
@@ -65,9 +109,9 @@ object JsonEncodings {
         }
       }
     )
-    /*
-     * Again, serialize so that id is base64url encoded, as the webauthn spec demands.
-     */
+
+    // Custom serializer for PublicKeyCredentialDescriptor - encode credential ID as base64url
+    // The WebAuthn spec requires credential IDs to be base64url-encoded
     module.addSerializer(
       classOf[PublicKeyCredentialDescriptor],
       new JsonSerializer[PublicKeyCredentialDescriptor] {
