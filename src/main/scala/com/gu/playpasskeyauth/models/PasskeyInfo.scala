@@ -1,12 +1,10 @@
 package com.gu.playpasskeyauth.models
 
-import play.api.libs.json.{JsObject, JsValue, Json, Writes}
+import play.api.libs.json.{Json, Writes}
 
 import java.time.Instant
 
-/** Information about a registered passkey for display in user interfaces.
-  *
-  * This is a read-only view of a passkey's metadata, suitable for listing in account settings or management screens.
+/** Information stored about a registered passkey.
   *
   * @param id
   *   The unique identifier for this passkey (credential ID)

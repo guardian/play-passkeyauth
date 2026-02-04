@@ -21,7 +21,12 @@ import scala.concurrent.ExecutionContext
   * action builders for protecting routes.
   *
   * @tparam U
-  *   The user type, which must have a [[PasskeyUser]] type class instance.
+  *   The user type, which must have a [[PasskeyUser]] type class instance. all methods to extract user IDs. You must
+  *   define this type class before creating a PasskeyAuth instance:
+  *   {{{
+  * case class MyUser(email: String, name: String)
+  *   given PasskeyUser[MyUser] with
+  *     extension (user: MyUser) def id: UserId = UserId(user.email)
   *
   * @tparam B
   *   The body content type (typically `AnyContent`)

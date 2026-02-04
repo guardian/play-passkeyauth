@@ -20,6 +20,8 @@ trait PasskeyRepository {
     */
   def loadPasskey(userId: UserId, passkeyId: PasskeyId): Future[CredentialRecord]
 
+  def loadPasskeyInfo(userId: UserId, passkeyId: PasskeyId): Future[PasskeyInfo]
+
   /** Loads IDs of all passkeys belonging to a given user. Needed to tell browser which authenticators to allow for
     * authentication.
     *
