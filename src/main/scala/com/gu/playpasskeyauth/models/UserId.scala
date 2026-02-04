@@ -35,6 +35,28 @@ object UserId {
     value
   }
 
+  /** Creates a UserId from a user by extracting its identifier using the PasskeyUser type class.
+    *
+    * @param user
+    *   The user instance from which to extract the identifier
+    * @param passKeyUser
+    *   The PasskeyUser instance for the user type (resolved implicitly)
+    * @return
+    *   A type-safe UserId extracted from the user
+    * @example
+    *   {{{
+    * case class MyUser(email: String, name: String)
+    *
+    * given PasskeyUser[MyUser] with
+    *   extension (user: MyUser) def id: UserId = UserId(user.email)
+    *
+    * val user = MyUser("alice@example.com", "Alice")
+    * val userId = UserId.from(user)  // Uses the PasskeyUser instance to extract the ID
+    *   }}}
+    */
+  def from[U](user: U)(using passKeyUser: PasskeyUser[U]): UserId =
+    user.id
+
   /** Extension methods for UserId */
   extension (userId: UserId) {
 
