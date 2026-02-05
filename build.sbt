@@ -1,6 +1,15 @@
 import ReleaseTransformations.*
 import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
+ThisBuild / scalaVersion := "3.3.7"
+ThisBuild / scalacOptions ++= Seq(
+  "-explain",
+  "-no-indent",
+  "-release:11",
+  "-Werror"
+)
+ThisBuild / scalafmtOnCompile := true
+
 val playVersion = "3.0.10"
 
 /*
@@ -12,6 +21,8 @@ val playVersion = "3.0.10"
 val safeTransitiveDependencies = {
   val jacksonVersion = "2.21.0"
   Seq(
+    "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion % Runtime,
+    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonVersion % Runtime,
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonVersion % Runtime,
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion % Runtime,
     "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion % Runtime,
@@ -25,15 +36,6 @@ lazy val root = project
     licenses := Seq(License.Apache2),
     organization := "com.gu",
     name := "play-passkeyauth",
-    scalaVersion := "3.3.7",
-    scalacOptions ++= Seq(
-      "-deprecation",
-      "-explain",
-      "-no-indent",
-      "-release:11",
-      "-Werror"
-    ),
-    scalafmtOnCompile := true,
     libraryDependencies ++= Seq(
       "org.playframework" %% "play" % playVersion,
       "com.webauthn4j" % "webauthn4j-core" % "0.31.0.RELEASE",
@@ -53,4 +55,14 @@ lazy val root = project
       setNextVersion,
       commitNextVersion
     )
+  )
+
+lazy val example = project
+  .in(file("example"))
+  .enablePlugins(PlayScala)
+  .dependsOn(root)
+  .settings(
+    name := "play-passkeyauth-example",
+    libraryDependencies += guice,
+    publish / skip := true
   )

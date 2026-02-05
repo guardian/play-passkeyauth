@@ -27,6 +27,21 @@ Add to your `build.sbt`:
 libraryDependencies += "com.gu" %% "play-passkey-auth" % "<version>"
 ```
 
+## Quick start
+
+See the [example](example/) directory for a complete, working Play application that demonstrates:
+- Registering new passkeys
+- Authenticating with passkeys
+- Managing (listing and deleting) passkeys
+- In-memory repository implementations
+
+Run the example:
+```bash
+sbt "project example" run
+```
+
+Then open http://localhost:9000 in your browser.
+
 ## Integration steps
 
 1. Define a [PasskeyUser](src/main/scala/com/gu/playpasskeyauth/models/PasskeyUser.scala) instance for your user type.
