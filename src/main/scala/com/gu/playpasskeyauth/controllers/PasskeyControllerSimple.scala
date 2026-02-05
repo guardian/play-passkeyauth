@@ -26,8 +26,6 @@ import scala.util.Try
   *   Function to extract the user's display name from a request (injected by client)
   * @param registrationRedirect
   *   Where to redirect after successful registration
-  * @param ec
-  *   Execution context
   *
   * @example
   *   {{{
@@ -36,7 +34,7 @@ import scala.util.Try
   *   cc: ControllerComponents,
   *   passkeyAuth: PasskeyAuthSimple,
   *   authAction: AuthenticatedAction
-  * )(implicit ec: ExecutionContext) extends PasskeyControllerSimple(
+  * )(using ExecutionContext) extends PasskeyControllerSimple(
   *   cc,
   *   passkeyAuth,
   *   extractUserId = req => Future.successful(UserId(req.session("userId"))),
@@ -51,7 +49,7 @@ class PasskeyControllerSimple(
     extractUserId: Request[_] => Future[UserId],
     extractUserName: Request[_] => Future[String],
     registrationRedirect: Call
-)(using ec: ExecutionContext)
+)(using ExecutionContext)
     extends AbstractController(cc)
     with Logging {
 
@@ -80,8 +78,8 @@ class PasskeyControllerSimple(
   /** Register a new passkey.
     *
     * Expects JSON body with:
-    *   - name: String (the passkey name)
-    *   - credential: JsValue (from navigator.credentials.create())
+    *   - name: String (friendly name for the passkey, e.g., "My YubiKey")
+    *   - credential: JsValue (the response from navigator.credentials.create())
     */
   def register: Action[JsValue] = Action.async(parse.json) { request =>
     (for {
@@ -187,8 +185,6 @@ class PasskeyControllerSimple(
     }
   }
 
-  // Helper methods for extracting data from requests using the config
-
   private def extractPasskeyName(request: Request[_]): Future[String] = {
     Future.fromTry(Try {
       passkeyAuth.config.requestConfig
@@ -211,46 +207,5 @@ class PasskeyControllerSimple(
         .extractAssertion(request)
         .getOrElse(throw new IllegalArgumentException("Missing assertion in request"))
     })
-  }
-}
-
-object PasskeyControllerSimple {
-
-  /** Create a PasskeyControllerSimple with session-based user extraction.
-    *
-    * This is a convenience constructor for applications that store user info in the session.
-    *
-    * @param cc
-    *   Controller components
-    * @param passkeyAuth
-    *   The PasskeyAuthSimple instance
-    * @param userIdSessionKey
-    *   The session key for the user ID (default: "userId")
-    * @param userNameSessionKey
-    *   The session key for the user name (default: "userName")
-    * @param registrationRedirect
-    *   Where to redirect after registration
-    * @param ec
-    *   Execution context
-    * @return
-    *   Configured controller
-    */
-  def withSessionAuth(
-      cc: ControllerComponents,
-      passkeyAuth: PasskeyAuthSimple,
-      userIdSessionKey: String = "userId",
-      userNameSessionKey: String = "userName",
-      registrationRedirect: Call
-  )(using ec: ExecutionContext): PasskeyControllerSimple = {
-    new PasskeyControllerSimple(
-      cc,
-      passkeyAuth,
-      extractUserId = req =>
-        Future.successful(
-          UserId(req.session.get(userIdSessionKey).getOrElse(throw new IllegalStateException("User session not found")))
-        ),
-      extractUserName = req => Future.successful(req.session.get(userNameSessionKey).getOrElse("User")),
-      registrationRedirect
-    )
   }
 }
