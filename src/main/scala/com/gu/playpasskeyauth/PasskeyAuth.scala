@@ -121,7 +121,7 @@ class PasskeyAuth[U, B](
     getUserName: U => String = (u: U) => "", // Function to extract display name from user
     webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
 )(using UserIdExtractor[U], ExecutionContext) {
-  private val verificationService: PasskeyVerificationService =
+  val verificationService: PasskeyVerificationService =
     new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo, webAuthnConfig)
 
   /** Creates an action builder that verifies passkey authentication.
