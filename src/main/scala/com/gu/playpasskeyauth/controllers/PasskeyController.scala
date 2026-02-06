@@ -54,7 +54,9 @@ class PasskeyController[U, B](
     userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
     creationDataAction: ActionBuilder[[A] =>> RequestWithCreationData[U, A], B],
     registrationRedirect: Call,
+    // TODO: why is this in different form to other extractors?
     getUserName: U => String = (u: U) => "" // Default to empty string, can be overridden
+    // TODO: why is this given when other extractors aren't?
 )(using userIdExtractor: UserIdExtractor[U], val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
@@ -124,18 +126,6 @@ class PasskeyController[U, B](
   def authenticationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
     val userId = userIdExtractor(request.user)
     apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(userId))
-  }
-
-  /** Lists all passkeys registered for the authenticated user.
-    *
-    * Returns a JSON array of passkey information including ID, name, creation time, and last used time.
-    *
-    * @return
-    *   A Play action that returns the list of passkeys as JSON, or an error response
-    */
-  def list: Action[Unit] = userAction.async(parse.empty) { request =>
-    val userId = userIdExtractor(request.user)
-    apiResponse("list", request.user, passkeyService.listPasskeys(userId))
   }
 
   /** Deletes a passkey for the authenticated user.

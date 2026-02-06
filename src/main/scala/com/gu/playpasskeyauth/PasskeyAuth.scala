@@ -108,19 +108,27 @@ import scala.concurrent.ExecutionContext
   * }
   *   }}}
   */
+// TODO: expose traits: Controller, VerificationService, Logic, Filter - calling code where these are used can just have one of these traits as param
 class PasskeyAuth[U, B](
     controllerComponents: ControllerComponents,
     app: HostApp,
+    // TODO: how is this used?
     userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
+    // TODO: how is this used?
     creationDataExtractor: CreationDataExtractor[[A] =>> RequestWithUser[U, A]],
+    // TODO: how is this used?
     authenticationDataExtractor: AuthenticationDataExtractor[[A] =>> RequestWithUser[U, A]],
+    // TODO: how is this used?
     passkeyNameExtractor: PasskeyNameExtractor[[A] =>> RequestWithUser[U, A]],
     registrationRedirect: Call,
+    // TODO: how is this used?
     getUserName: U => String = (u: U) => "", // Function to extract display name from user
     webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
+    // TODO: why is this given but others aren't?
 )(using UserIdExtractor[U], ExecutionContext) {
+  // TODO: instead of exposing the verification service expose its methods and then implement its methods directly in this class
   val verificationService: PasskeyVerificationService =
     new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo, webAuthnConfig)
 
