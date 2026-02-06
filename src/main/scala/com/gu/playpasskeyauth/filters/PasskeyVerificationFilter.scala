@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.filters
 
-import com.gu.playpasskeyauth.models.UserIdExtractor
+import com.gu.playpasskeyauth.models.User
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.RequestWithAuthenticationData
 import com.webauthn4j.data.AuthenticationData
@@ -25,20 +25,16 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param verifier
   *   The service that performs passkey verification
   *
-  * @param userIdExtractor
-  *   Function to extract UserId from the user type (resolved implicitly)
-  *
   * @see
   *   [[https://webauthn4j.github.io/webauthn4j/en/#webauthn-assertion-verification-and-post-processing]]
   */
-class PasskeyVerificationFilter[U](verifier: PasskeyVerificationService)(using
-    userIdExtractor: UserIdExtractor[U],
+class PasskeyVerificationFilter[U: User](verifier: PasskeyVerificationService)(using
     val executionContext: ExecutionContext
 ) extends ActionFilter[[A] =>> RequestWithAuthenticationData[U, A]]
     with Logging {
 
   def filter[A](request: RequestWithAuthenticationData[U, A]): Future[Option[Result]] = {
-    val userId = userIdExtractor(request.user)
+    val userId = request.user.id
     verifier
       .verify(userId, request.authenticationData)
       .map { _ =>

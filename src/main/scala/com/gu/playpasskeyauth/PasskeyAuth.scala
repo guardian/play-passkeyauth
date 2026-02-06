@@ -2,7 +2,7 @@ package com.gu.playpasskeyauth
 
 import com.gu.playpasskeyauth.controllers.PasskeyController
 import com.gu.playpasskeyauth.filters.PasskeyVerificationFilter
-import com.gu.playpasskeyauth.models.{HostApp, UserIdExtractor, WebAuthnConfig}
+import com.gu.playpasskeyauth.models.{HostApp, User, WebAuthnConfig}
 import com.gu.playpasskeyauth.services.{
   PasskeyChallengeRepository,
   PasskeyRepository,
@@ -108,20 +108,26 @@ import scala.concurrent.ExecutionContext
   * }
   *   }}}
   */
-class PasskeyAuth[U, B](
+// TODO: expose traits: Controller, VerificationService, Logic, Filter - calling code where these are used can just have one of these traits as param
+class PasskeyAuth[U: User, B](
     controllerComponents: ControllerComponents,
     app: HostApp,
+    // TODO: how is this used?
     userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
+    // TODO: how is this used?
     creationDataExtractor: CreationDataExtractor[[A] =>> RequestWithUser[U, A]],
+    // TODO: how is this used?
     authenticationDataExtractor: AuthenticationDataExtractor[[A] =>> RequestWithUser[U, A]],
+    // TODO: how is this used?
     passkeyNameExtractor: PasskeyNameExtractor[[A] =>> RequestWithUser[U, A]],
     registrationRedirect: Call,
-    getUserName: U => String = (u: U) => "", // Function to extract display name from user
     webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
-)(using UserIdExtractor[U], ExecutionContext) {
-  private val verificationService: PasskeyVerificationService =
+    // TODO: why is this given but others aren't?
+)(using ExecutionContext) {
+  // TODO: instead of exposing the verification service expose its methods and then implement its methods directly in this class
+  val verificationService: PasskeyVerificationService =
     new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo, webAuthnConfig)
 
   /** Creates an action builder that verifies passkey authentication.
@@ -191,8 +197,7 @@ class PasskeyAuth[U, B](
       verificationService,
       userAction,
       userAndCreationDataAction,
-      registrationRedirect,
-      getUserName
+      registrationRedirect
     )
   }
 }

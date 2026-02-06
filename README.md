@@ -44,7 +44,7 @@ Then open http://localhost:9000 in your browser.
 
 ## Integration steps
 
-1. Define a [PasskeyUser](src/main/scala/com/gu/playpasskeyauth/models/PasskeyUser.scala) instance for your user type.
+1. Define a [User](src/main/scala/com/gu/playpasskeyauth/models/User.scala) instance for your user type.
 2. Implement a [PasskeyRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyRepository.scala).
 3. Implement a [PasskeyChallengeRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyChallengeRepository.scala).
 4. Implement a [CreationDataExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).

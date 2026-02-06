@@ -1,5 +1,6 @@
 package com.gu.playpasskeyauth.models
 
+import com.webauthn4j.data.attestation.authenticator.AAGUID
 import play.api.libs.json.{Json, Writes}
 
 import java.time.Instant
@@ -15,13 +16,11 @@ import java.time.Instant
   * @param lastUsedAt
   *   When the passkey was last used for authentication, if ever
   */
+// TODO: we probably don't need this - can do everything with Passkey class
 case class PasskeyInfo(
     id: PasskeyId,
     name: PasskeyName,
+    aaguid: AAGUID,
     createdAt: Instant,
     lastUsedAt: Option[Instant]
 )
-
-object PasskeyInfo {
-  given Writes[PasskeyInfo] = Json.writes[PasskeyInfo]
-}

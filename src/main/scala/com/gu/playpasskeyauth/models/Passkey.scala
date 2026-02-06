@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.models
 
 import com.webauthn4j.credential.CredentialRecord
-import play.api.libs.json.{Json, Writes}
+import com.webauthn4j.data.attestation.authenticator.AAGUID
 
 import java.time.{Clock, Instant}
 
@@ -45,7 +45,8 @@ case class Passkey(
     credentialRecord: CredentialRecord,
     createdAt: Instant,
     lastUsedAt: Option[Instant],
-    signCount: Long
+    signCount: Long,
+    aaguid: AAGUID
 ) {
 
   /** Update this passkey after successful authentication.
@@ -55,17 +56,13 @@ case class Passkey(
     * @return
     *   Updated passkey with new last used time and sign count
     */
-  def recordAuthentication(newCount: Long, clock: Clock): Passkey = {
+  def recordAuthentication(newCount: Long, clock: Clock): Passkey =
     copy(lastUsedAt = Some(clock.instant()), signCount = newCount)
-  }
 
   /** Get the metadata for this passkey (without the credential record).
-    *
-    * Useful for listing passkeys to users without exposing credential details.
     */
-  def toInfo: PasskeyInfo = {
-    PasskeyInfo(id, name, createdAt, lastUsedAt)
-  }
+  def toInfo: PasskeyInfo =
+    PasskeyInfo(id, name, aaguid, createdAt, lastUsedAt)
 }
 
 object Passkey {
@@ -86,19 +83,14 @@ object Passkey {
       name: PasskeyName,
       credentialRecord: CredentialRecord,
       clock: Clock
-  ): Passkey = {
+  ): Passkey =
     Passkey(
       id = id,
       name = name,
       credentialRecord = credentialRecord,
       createdAt = clock.instant(),
       lastUsedAt = None,
-      signCount = 0
+      signCount = 0,
+      aaguid = credentialRecord.getAttestedCredentialData.getAaguid
     )
-  }
-
-  /** JSON serialization for PasskeyInfo (metadata only, not credential) */
-  given Writes[Passkey] = Writes { passkey =>
-    Json.toJson(passkey.toInfo)
-  }
 }
