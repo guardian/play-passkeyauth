@@ -1,6 +1,7 @@
 package com.gu.playpasskeyauth.models
 
 import com.webauthn4j.credential.CredentialRecord
+import com.webauthn4j.data.attestation.authenticator.AAGUID
 import play.api.libs.json.{Json, Writes}
 
 import java.time.{Clock, Instant}
@@ -45,7 +46,8 @@ case class Passkey(
     credentialRecord: CredentialRecord,
     createdAt: Instant,
     lastUsedAt: Option[Instant],
-    signCount: Long
+    signCount: Long,
+    aaguid: AAGUID
 ) {
 
   /** Update this passkey after successful authentication.
@@ -93,7 +95,8 @@ object Passkey {
       credentialRecord = credentialRecord,
       createdAt = clock.instant(),
       lastUsedAt = None,
-      signCount = 0
+      signCount = 0,
+      aaguid = credentialRecord.getAttestedCredentialData.getAaguid
     )
   }
 
