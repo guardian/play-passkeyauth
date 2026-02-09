@@ -29,27 +29,3 @@ case class UserId(value: String) {
     */
   def bytes: Array[Byte] = value.getBytes(java.nio.charset.StandardCharsets.UTF_8)
 }
-
-object UserId {
-
-  /** Creates a UserId from a user by extracting its identifier using a UserIdExtractor.
-    *
-    * @param user
-    *   The user instance from which to extract the identifier
-    * @param extractor
-    *   The extractor function (resolved implicitly)
-    * @return
-    *   A type-safe UserId extracted from the user
-    * @example
-    *   {{{
-    * case class MyUser(email: String, name: String)
-    *
-    * given UserIdExtractor[MyUser] = user => UserId(user.email)
-    *
-    * val user = MyUser("alice@example.com", "Alice")
-    * val userId = UserId.from(user)  // Uses the UserIdExtractor to extract the ID
-    *   }}}
-    */
-  def from[U](user: U)(using extractor: UserIdExtractor[U]): UserId =
-    extractor(user)
-}

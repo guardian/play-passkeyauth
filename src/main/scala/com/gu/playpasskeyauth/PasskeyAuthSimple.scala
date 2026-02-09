@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth
 
-import com.gu.playpasskeyauth.models.{Passkey, PasskeyAuthConfig, PasskeyId, PasskeyInfo, UserId, UserIdExtractor}
+import com.gu.playpasskeyauth.models.{Passkey, PasskeyAuthConfig, PasskeyId, PasskeyInfo, UserId}
 import com.gu.playpasskeyauth.services.{
   PasskeyChallengeRepository,
   PasskeyRepository,
@@ -269,8 +269,6 @@ object PasskeyAuthSimple {
     *   Repository for passkeys
     * @param challengeRepo
     *   Repository for challenges
-    * @param ec
-    *   Execution context
     * @return
     *   Configured PasskeyAuthSimple instance
     */

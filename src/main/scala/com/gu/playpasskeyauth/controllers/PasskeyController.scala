@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.controllers
 
 import com.gu.playpasskeyauth.models.JsonEncodings.given
-import com.gu.playpasskeyauth.models.{PasskeyId, UserIdExtractor}
+import com.gu.playpasskeyauth.models.{PasskeyId, User}
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.{RequestWithCreationData, RequestWithUser}
 import play.api.Logging
@@ -41,23 +41,14 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param registrationRedirect
   *   The [[Call]] to redirect to after successful passkey registration. For example:
   *   `routes.DashboardController.index()` or `Call("GET", "/dashboard")`
-  *
-  * @param userIdExtractor
-  *   Function to extract UserId from the user type (resolved implicitly)
-  *
-  * @param getUserName
-  *   Function to extract display name from the user type for WebAuthn
   */
-class PasskeyController[U, B](
+class PasskeyController[U: User, B](
     controllerComponents: ControllerComponents,
     passkeyService: PasskeyVerificationService,
     userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
     creationDataAction: ActionBuilder[[A] =>> RequestWithCreationData[U, A], B],
-    registrationRedirect: Call,
-    // TODO: why is this in different form to other extractors?
-    getUserName: U => String = (u: U) => "" // Default to empty string, can be overridden
-    // TODO: why is this given when other extractors aren't?
-)(using userIdExtractor: UserIdExtractor[U], val executionContext: ExecutionContext)
+    registrationRedirect: Call
+)(using val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
 
@@ -76,12 +67,10 @@ class PasskeyController[U, B](
     *   A Play action that returns the creation options as JSON, or an error response
     */
   def creationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
-    val userId = userIdExtractor(request.user)
-    val userName = getUserName(request.user)
     apiResponse(
       "creationOptions",
       request.user,
-      passkeyService.buildCreationOptions(userId, userName)
+      passkeyService.buildCreationOptions(request.user.id, request.user.displayName)
     )
   }
 
@@ -101,12 +90,11 @@ class PasskeyController[U, B](
     *   A Play action that redirects on success, or returns an error response
     */
   def register: Action[B] = creationDataAction.async { request =>
-    val userId = userIdExtractor(request.user)
     apiRedirectResponse(
       "register",
       request.user,
       registrationRedirect,
-      passkeyService.register(userId, request.passkeyName, request.creationData).map(_ => ())
+      passkeyService.register(request.user.id, request.passkeyName, request.creationData).map(_ => ())
     )
   }
 
@@ -124,8 +112,7 @@ class PasskeyController[U, B](
     *   A Play action that returns the authentication options as JSON, or an error response
     */
   def authenticationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
-    val userId = userIdExtractor(request.user)
-    apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(userId))
+    apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(request.user.id))
   }
 
   /** Deletes a passkey for the authenticated user.
@@ -137,27 +124,25 @@ class PasskeyController[U, B](
     *   A Play action that returns NoContent on success, or an error response
     */
   def delete(passkeyIdBase64: String): Action[Unit] = userAction.async(parse.empty) { request =>
-    val userId = userIdExtractor(request.user)
     apiResponse(
       "delete",
       request.user,
-      passkeyService.deletePasskey(userId, PasskeyId.fromBase64Url(passkeyIdBase64))
+      passkeyService.deletePasskey(request.user.id, PasskeyId.fromBase64Url(passkeyIdBase64))
     )
   }
 
   private def apiResponse[A](action: String, user: U, fa: => Future[A])(using
       writer: Writes[A]
   ): Future[Result] = {
-    val userId = userIdExtractor(user)
     apiResponse(
       action,
       user,
       fa.map {
         case () =>
-          logger.info(s"$action: $userId: Success")
+          logger.info(s"$action: ${user.id}: Success")
           NoContent
         case a =>
-          logger.info(s"$action: $userId: Success")
+          logger.info(s"$action: ${user.id}: Success")
           Ok(writer.writes(a))
       }
     )
@@ -169,25 +154,23 @@ class PasskeyController[U, B](
       redirect: Call,
       fa: => Future[A]
   ): Future[Result] = {
-    val userId = userIdExtractor(user)
     apiResponse(
       action,
       user,
       fa.map { _ =>
-        logger.info(s"$action: $userId: Success")
+        logger.info(s"$action: ${user.id}: Success")
         Redirect(redirect)
       }
     )
   }
 
   private def apiResponse(action: String, user: U, fresult: => Future[Result]): Future[Result] = {
-    val userId = userIdExtractor(user)
     fresult.recover {
       case e: PasskeyException =>
-        logger.warn(s"$action: $userId: Domain error: ${e.getMessage}")
+        logger.warn(s"$action: ${user.id}: Domain error: ${e.getMessage}")
         BadRequest("Something went wrong")
       case e =>
-        logger.error(s"$action: $userId: Failure: ${e.getMessage}", e)
+        logger.error(s"$action: ${user.id}: Failure: ${e.getMessage}", e)
         InternalServerError("Something went wrong")
     }
   }
