@@ -37,13 +37,6 @@ import scala.concurrent.ExecutionContext
   * @param app
   *   The [[HostApp]] configuration identifying your application (relying party).
   *
-  * @param userAction
-  *   An action builder that extracts the authenticated user. Client code is responsible for ensuring the user is signed
-  *   in before this action runs. Typically created by composing your authentication action with [[UserAction]]:
-  *   {{{
-  *   val userAction = authAction.andThen(new UserAction(myUserExtractor))
-  *   }}}
-  *
   * @param passkeyRepo
   *   Repository for storing passkey credentials. You must implement [[PasskeyRepository]] for your storage backend
   *   (e.g., PostgreSQL, DynamoDB)
@@ -52,23 +45,20 @@ import scala.concurrent.ExecutionContext
   *   Repository for storing temporary challenges. You must implement [[PasskeyChallengeRepository]] (can be in-memory
   *   for development, or Redis/database for production)
   *
-  * @param creationDataExtractor
-  *   Strategy for extracting passkey creation data from requests. This data comes from `navigator.credentials.create()`
-  *   in the browser.
-  *
-  * @param authenticationDataExtractor
-  *   Strategy for extracting passkey authentication data from requests. This data comes from
-  *   `navigator.credentials.get()` in the browser.
-  *
-  * @param passkeyNameExtractor
-  *   Strategy for extracting the user-provided passkey name from requests.
-  *
   * @param registrationRedirect
   *   Where to redirect after successful passkey registration. Example: `routes.AccountController.settings()`
   *
   * @param webAuthnConfig
   *   Configuration for WebAuthn operations (algorithms, timeouts, etc.). Defaults to [[WebAuthnConfig.default]] which
   *   is suitable for most applications.
+  *
+  * Context parameters (provided via `using` clause):
+  *   - `ExecutionContext`: Required for asynchronous operations
+  *   - `PasskeyAuthContext[U, B]`: A typeclass that bundles together all authentication-related components:
+  *     - User action builder for extracting authenticated users
+  *     - Creation data extractor for `navigator.credentials.create()` responses
+  *     - Authentication data extractor for `navigator.credentials.get()` responses
+  *     - Passkey name extractor for user-provided passkey names
   *
   * @example
   *   {{{
@@ -80,23 +70,29 @@ import scala.concurrent.ExecutionContext
   *   challengeRepo: MyChallengeRepository
   * )(using ec: ExecutionContext) {
   *
-  *   // Create the user action by composing auth with user extraction
-  *   val userExtractor: UserExtractor[MyUser, AuthenticatedRequest] = _.user
-  *   val userAction = authAction.andThen(new UserAction(userExtractor))
-  *
+  *   // Define the extractors
   *   given CreationDataExtractor[[A] =>> RequestWithUser[MyUser, A]] = ...
   *   given AuthenticationDataExtractor[[A] =>> RequestWithUser[MyUser, A]] = ...
   *   given PasskeyNameExtractor[[A] =>> RequestWithUser[MyUser, A]] = ...
   *
+  *   // Create the user action by composing auth with user extraction
+  *   val userExtractor: UserExtractor[MyUser, AuthenticatedRequest] = _.user
+  *   val userAction = authAction.andThen(new UserAction(userExtractor))
+  *
+  *   // Bundle all authentication components into a single context
+  *   given PasskeyAuthContext[MyUser, AnyContent] = PasskeyAuthContext(
+  *     userAction = userAction,
+  *     creationDataExtractor = summon,
+  *     authenticationDataExtractor = summon,
+  *     passkeyNameExtractor = summon
+  *   )
+  *
+  *   // Now PasskeyAuth only needs the core dependencies
   *   val passkeyAuth = new PasskeyAuth[MyUser, AnyContent](
   *     cc,
   *     HostApp("My App", new URI("https://myapp.example.com")),
-  *     userAction,
   *     passkeyRepo,
   *     challengeRepo,
-  *     creationDataExtractor,
-  *     authenticationDataExtractor,
-  *     passkeyNameExtractor,
   *     routes.AccountController.settings()
   *   )
   *
@@ -112,19 +108,11 @@ import scala.concurrent.ExecutionContext
 class PasskeyAuth[U: User, B](
     controllerComponents: ControllerComponents,
     app: HostApp,
-    // TODO: how is this used?
-    userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
-    // TODO: how is this used?
-    creationDataExtractor: CreationDataExtractor[[A] =>> RequestWithUser[U, A]],
-    // TODO: how is this used?
-    authenticationDataExtractor: AuthenticationDataExtractor[[A] =>> RequestWithUser[U, A]],
-    // TODO: how is this used?
-    passkeyNameExtractor: PasskeyNameExtractor[[A] =>> RequestWithUser[U, A]],
     registrationRedirect: Call,
+    ctx: PasskeyAuthContext[U, B],
     webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
-    // TODO: why is this given but others aren't?
 )(using ExecutionContext) {
   // TODO: instead of exposing the verification service expose its methods and then implement its methods directly in this class
   val verificationService: PasskeyVerificationService =
@@ -152,9 +140,9 @@ class PasskeyAuth[U: User, B](
     *   }}}
     */
   def verificationAction(): ActionBuilder[[A] =>> RequestWithAuthenticationData[U, A], B] = {
-    val authDataAction = new AuthenticationDataAction[U](authenticationDataExtractor)
+    val authDataAction = new AuthenticationDataAction[U](ctx.authenticationDataExtractor)
     val verificationFilter = new PasskeyVerificationFilter[U](verificationService)
-    userAction.andThen(authDataAction).andThen(verificationFilter)
+    ctx.userAction.andThen(authDataAction).andThen(verificationFilter)
   }
 
   /** Creates a controller for passkey registration and management endpoints.
@@ -190,12 +178,12 @@ class PasskeyAuth[U: User, B](
     *   }}}
     */
   def controller(): PasskeyController[U, B] = {
-    val creationDataAction = new CreationDataAction[U](creationDataExtractor, passkeyNameExtractor)
-    val userAndCreationDataAction = userAction.andThen(creationDataAction)
+    val creationDataAction = new CreationDataAction[U](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
+    val userAndCreationDataAction = ctx.userAction.andThen(creationDataAction)
     new PasskeyController[U, B](
       controllerComponents,
       verificationService,
-      userAction,
+      ctx.userAction,
       userAndCreationDataAction,
       registrationRedirect
     )
