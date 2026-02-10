@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyInfo, UserId}
+import com.gu.playpasskeyauth.models.{Passkey, PasskeyId, UserId}
 import com.webauthn4j.credential.CredentialRecord
 import com.webauthn4j.data.{AuthenticationData, PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions}
 import play.api.libs.json.JsValue
@@ -43,7 +43,7 @@ trait PasskeyVerificationService {
     * @return
     *   A Future containing the registered [[com.webauthn4j.credential.CredentialRecord]]
     */
-  def register(userId: UserId, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
+  def registerPasskey(userId: UserId, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
 
   /** Lists all passkeys registered for the user.
     *
@@ -51,9 +51,9 @@ trait PasskeyVerificationService {
     *   The user ID whose passkeys to list
     *
     * @return
-    *   A Future containing a list of [[PasskeyInfo]] with metadata about each passkey
+    *   A Future containing a list of [[Passkey]] with metadata about each passkey
     */
-  def listPasskeys(userId: UserId): Future[List[PasskeyInfo]]
+  def listPasskeys(userId: UserId): Future[List[Passkey]]
 
   /** Deletes a passkey for the user.
     *
@@ -90,5 +90,5 @@ trait PasskeyVerificationService {
     * @return
     *   A Future containing the verified [[com.webauthn4j.data.AuthenticationData]]
     */
-  def verify(userId: UserId, authenticationResponse: JsValue): Future[AuthenticationData]
+  def verifyPasskey(userId: UserId, authenticationResponse: JsValue): Future[AuthenticationData]
 }

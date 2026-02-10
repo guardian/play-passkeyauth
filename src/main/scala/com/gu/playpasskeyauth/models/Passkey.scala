@@ -7,9 +7,6 @@ import java.time.{Clock, Instant}
 
 /** Complete passkey data including metadata and credential.
   *
-  * This unifies PasskeyInfo and CredentialRecord into a single model, simplifying the repository interface and making
-  * it easier to work with passkey data.
-  *
   * @param id
   *   The unique identifier for this passkey (credential ID)
   * @param name
@@ -58,11 +55,6 @@ case class Passkey(
     */
   def recordAuthentication(newCount: Long, clock: Clock): Passkey =
     copy(lastUsedAt = Some(clock.instant()), signCount = newCount)
-
-  /** Get the metadata for this passkey (without the credential record).
-    */
-  def toInfo: PasskeyInfo =
-    PasskeyInfo(id, name, aaguid, createdAt, lastUsedAt)
 }
 
 object Passkey {

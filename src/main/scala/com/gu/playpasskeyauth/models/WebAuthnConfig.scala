@@ -1,5 +1,6 @@
 package com.gu.playpasskeyauth.models
 
+import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.data.*
 import com.webauthn4j.data.PublicKeyCredentialHints.{CLIENT_DEVICE, HYBRID, SECURITY_KEY}
 import com.webauthn4j.data.PublicKeyCredentialType.PUBLIC_KEY
@@ -57,6 +58,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
   *   Optional set of allowed authenticator transports. None means all transports are allowed.
   */
 case class WebAuthnConfig(
+    manager: WebAuthnManager,
     publicKeyCredentialParameters: List[PublicKeyCredentialParameters],
     timeout: Duration,
     authenticatorSelectionCriteria: AuthenticatorSelectionCriteria,
@@ -113,6 +115,7 @@ object WebAuthnConfig {
     }
 
     WebAuthnConfig(
+      manager = WebAuthnManager.createNonStrictWebAuthnManager(),
       publicKeyCredentialParameters = publicKeyCredentialParameters,
       timeout = Duration(60, SECONDS),
       authenticatorSelectionCriteria = authenticatorSelectionCriteria,
