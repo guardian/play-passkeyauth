@@ -1,6 +1,6 @@
 package models
 
-import com.gu.playpasskeyauth.models.{UserId, UserIdExtractor}
+import com.gu.playpasskeyauth.models.{User as PasskeyUser, UserId}
 
 /** Simple user model for the example application.
   *
@@ -15,8 +15,13 @@ case class User(id: String, username: String)
 
 object User {
 
-  /** Defines how to extract a UserId from a User for passkey operations. */
-  given UserIdExtractor[User] = user => UserId(user.id)
+  /** Defines how to extract passkey user information from a User for passkey operations. */
+  given PasskeyUser[User] with {
+    extension (u: User) {
+      def id: UserId = UserId(u.id)
+      def displayName: String = u.username
+    }
+  }
 
   /** Demo user for the example application.
     *

@@ -4,7 +4,7 @@ import com.gu.playpasskeyauth.PasskeyAuthContext
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.models.{PasskeyId, User}
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
-import com.gu.playpasskeyauth.web.{CreationDataAction, RequestWithCreationData, RequestWithUser}
+import com.gu.playpasskeyauth.web.CreationDataAction
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -30,14 +30,6 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * @param passkeyService
   *   The service that handles passkey operations (creation, registration, verification)
-  *
-  * @param userAction
-  *   An action builder that extracts the user from the request. This transforms a standard request into a
-  *   [[RequestWithUser]] containing the authenticated user.
-  *
-  * @param creationDataAction
-  *   An action builder that extracts both the user and the passkey creation data from the request. The creation data
-  *   comes from the browser's `navigator.credentials.create()` call.
   *
   * @param registrationRedirect
   *   The [[Call]] to redirect to after successful passkey registration. For example:
