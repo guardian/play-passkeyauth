@@ -36,7 +36,7 @@ class PasskeyVerificationFilter[U: User](verifier: PasskeyVerificationService)(u
   def filter[A](request: RequestWithAuthenticationData[U, A]): Future[Option[Result]] = {
     val userId = request.user.id
     verifier
-      .verify(userId, request.authenticationData)
+      .verifyPasskey(userId, request.authenticationData)
       .map { _ =>
         logger.info(s"verify: ${userId.value}: Verified passkey")
         None

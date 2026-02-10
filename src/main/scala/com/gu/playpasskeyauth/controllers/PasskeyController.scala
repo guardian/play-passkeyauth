@@ -97,7 +97,7 @@ class PasskeyController[U: User, B](
       "register",
       request.user,
       registrationRedirect,
-      passkeyService.register(request.user.id, request.passkeyName, request.creationData).map(_ => ())
+      passkeyService.registerPasskey(request.user.id, request.passkeyName, request.creationData).map(_ => ())
     )
   }
 
