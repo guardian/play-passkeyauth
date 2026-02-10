@@ -1,4 +1,5 @@
 package com.gu.playpasskeyauth.models
+
 import play.api.libs.json.{JsString, Writes}
 
 /** Validated and sanitised passkey name.
