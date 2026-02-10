@@ -1,5 +1,6 @@
 package com.gu.playpasskeyauth.web
 
+import com.gu.playpasskeyauth.models.User
 import play.api.mvc.*
 
 import scala.concurrent.{ExecutionContext, Future}

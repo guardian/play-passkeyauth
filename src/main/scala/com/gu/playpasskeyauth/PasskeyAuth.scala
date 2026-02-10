@@ -37,6 +37,9 @@ import scala.concurrent.ExecutionContext
   * @param app
   *   The [[HostApp]] configuration identifying your application (relying party).
   *
+  * @param ctx
+  *   Context
+  *
   * @param passkeyRepo
   *   Repository for storing passkey credentials. You must implement [[PasskeyRepository]] for your storage backend
   *   (e.g., PostgreSQL, DynamoDB)
@@ -48,17 +51,15 @@ import scala.concurrent.ExecutionContext
   * @param registrationRedirect
   *   Where to redirect after successful passkey registration. Example: `routes.AccountController.settings()`
   *
-  * @param webAuthnConfig
-  *   Configuration for WebAuthn operations (algorithms, timeouts, etc.). Defaults to [[WebAuthnConfig.default]] which
-  *   is suitable for most applications.
-  *
   * Context parameters (provided via `using` clause):
   *   - `ExecutionContext`: Required for asynchronous operations
   *   - `PasskeyAuthContext[U, B]`: A typeclass that bundles together all authentication-related components:
+  *     - User type constraint (`User[U]`)
   *     - User action builder for extracting authenticated users
   *     - Creation data extractor for `navigator.credentials.create()` responses
   *     - Authentication data extractor for `navigator.credentials.get()` responses
   *     - Passkey name extractor for user-provided passkey names
+  *     - WebAuthn configuration (algorithms, timeouts, authenticator selection, etc.)
   *
   * @example
   *   {{{
@@ -108,15 +109,14 @@ import scala.concurrent.ExecutionContext
 class PasskeyAuth[U: User, B](
     controllerComponents: ControllerComponents,
     app: HostApp,
+    ctx: PasskeyAuthContext[U, B],
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
-    registrationRedirect: Call,
-    ctx: PasskeyAuthContext[U, B],
-    webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
+    registrationRedirect: Call
 )(using ExecutionContext) {
   // TODO: instead of exposing the verification service expose its methods and then implement its methods directly in this class
   val verificationService: PasskeyVerificationService =
-    new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo, webAuthnConfig)
+    new PasskeyVerificationServiceImpl(app, passkeyRepo, challengeRepo, ctx.webAuthnConfig)
 
   /** Creates an action builder that verifies passkey authentication.
     *
@@ -178,13 +178,10 @@ class PasskeyAuth[U: User, B](
     *   }}}
     */
   def controller(): PasskeyController[U, B] = {
-    val creationDataAction = new CreationDataAction[U](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
-    val userAndCreationDataAction = ctx.userAction.andThen(creationDataAction)
     new PasskeyController[U, B](
       controllerComponents,
+      ctx,
       verificationService,
-      ctx.userAction,
-      userAndCreationDataAction,
       registrationRedirect
     )
   }

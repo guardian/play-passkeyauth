@@ -1,9 +1,9 @@
 package com.gu.playpasskeyauth.filters
 
+import com.gu.playpasskeyauth.PasskeyAuthContext
 import com.gu.playpasskeyauth.models.User
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.RequestWithAuthenticationData
-import com.webauthn4j.data.AuthenticationData
 import play.api.Logging
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.mvc.{ActionFilter, Result}
