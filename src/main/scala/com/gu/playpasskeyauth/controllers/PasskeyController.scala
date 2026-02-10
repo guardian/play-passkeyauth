@@ -1,9 +1,10 @@
 package com.gu.playpasskeyauth.controllers
 
+import com.gu.playpasskeyauth.PasskeyAuthContext
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.models.{PasskeyId, User}
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
-import com.gu.playpasskeyauth.web.{RequestWithCreationData, RequestWithUser}
+import com.gu.playpasskeyauth.web.{CreationDataAction, RequestWithCreationData, RequestWithUser}
 import play.api.Logging
 import play.api.libs.json.Writes
 import play.api.mvc.*
@@ -44,13 +45,15 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class PasskeyController[U: User, B](
     controllerComponents: ControllerComponents,
+    ctx: PasskeyAuthContext[U, B],
     passkeyService: PasskeyVerificationService,
-    userAction: ActionBuilder[[A] =>> RequestWithUser[U, A], B],
-    creationDataAction: ActionBuilder[[A] =>> RequestWithCreationData[U, A], B],
     registrationRedirect: Call
 )(using val executionContext: ExecutionContext)
     extends AbstractController(controllerComponents)
     with Logging {
+
+  private val creationDataAction = new CreationDataAction[U](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
+  private val userAndCreationDataAction = ctx.userAction.andThen(creationDataAction)
 
   /** Generates the options required to create a new passkey credential.
     *
@@ -66,7 +69,7 @@ class PasskeyController[U: User, B](
     * @return
     *   A Play action that returns the creation options as JSON, or an error response
     */
-  def creationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
+  def creationOptions: Action[Unit] = ctx.userAction.async(parse.empty) { request =>
     apiResponse(
       "creationOptions",
       request.user,
@@ -89,7 +92,7 @@ class PasskeyController[U: User, B](
     * @return
     *   A Play action that redirects on success, or returns an error response
     */
-  def register: Action[B] = creationDataAction.async { request =>
+  def register: Action[B] = userAndCreationDataAction.async { request =>
     apiRedirectResponse(
       "register",
       request.user,
@@ -111,7 +114,7 @@ class PasskeyController[U: User, B](
     * @return
     *   A Play action that returns the authentication options as JSON, or an error response
     */
-  def authenticationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
+  def authenticationOptions: Action[Unit] = ctx.userAction.async(parse.empty) { request =>
     apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(request.user.id))
   }
 
@@ -123,7 +126,7 @@ class PasskeyController[U: User, B](
     * @return
     *   A Play action that returns NoContent on success, or an error response
     */
-  def delete(passkeyIdBase64: String): Action[Unit] = userAction.async(parse.empty) { request =>
+  def delete(passkeyIdBase64: String): Action[Unit] = ctx.userAction.async(parse.empty) { request =>
     apiResponse(
       "delete",
       request.user,

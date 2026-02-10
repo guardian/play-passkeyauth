@@ -57,12 +57,12 @@ lazy val root = project
     )
   )
 
-lazy val example = project
-  .in(file("example"))
-  .enablePlugins(PlayScala)
-  .dependsOn(root)
-  .settings(
-    name := "play-passkeyauth-example",
-    libraryDependencies += guice,
-    publish / skip := true
-  )
+//lazy val example = project
+//  .in(file("example"))
+//  .enablePlugins(PlayScala)
+//  .dependsOn(root)
+//  .settings(
+//    name := "play-passkeyauth-example",
+//    libraryDependencies += guice,
+//    publish / skip := true
+//  )
