@@ -32,6 +32,15 @@ object JsonEncodings {
 
   given Writes[Unit] = Writes { _ => JsNull }
 
+  given Writes[Passkey] = Writes { passkey =>
+    Json.obj(
+      "id" -> passkey.id.toBase64Url,
+      "name" -> passkey.name.value,
+      "createdAt" -> passkey.createdAt.toEpochMilli,
+      "lastUsedAt" -> passkey.lastUsedAt.map(_.toEpochMilli)
+    )
+  }
+
   /** Convert any object to a JSON string using Jackson.
     *
     * This is useful for serializing WebAuthn4j objects that have Jackson annotations.

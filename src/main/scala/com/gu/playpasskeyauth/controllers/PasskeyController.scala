@@ -4,9 +4,9 @@ import com.gu.playpasskeyauth.PasskeyAuthContext
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.models.{PasskeyId, User}
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
-import com.gu.playpasskeyauth.web.CreationDataAction
+import com.gu.playpasskeyauth.web.{AuthenticationDataAction, CreationDataAction}
 import play.api.Logging
-import play.api.libs.json.Writes
+import play.api.libs.json.{Json, Writes}
 import play.api.mvc.*
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,6 +46,8 @@ class PasskeyController[U: User, B](
 
   private val creationDataAction = new CreationDataAction[U](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
   private val userAndCreationDataAction = ctx.userAction.andThen(creationDataAction)
+  private val authDataAction = new AuthenticationDataAction[U](ctx.authenticationDataExtractor)
+  private val userAndAuthDataAction = ctx.userAction.andThen(authDataAction)
 
   /** Generates the options required to create a new passkey credential.
     *
@@ -110,6 +112,29 @@ class PasskeyController[U: User, B](
     apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(request.user.id))
   }
 
+  /** Verifies a passkey authentication assertion submitted by the browser.
+    *
+    * This endpoint receives the credential assertion created by `navigator.credentials.get()` in the browser. The
+    * request must contain the assertion data from the WebAuthn API.
+    *
+    * On success, returns a 200 JSON response. On failure, returns a 400 or 500 error response.
+    *
+    * @see
+    *   [[https://webauthn4j.github.io/webauthn4j/en/#verifying-the-webauthn-assertion]]
+    *
+    * @return
+    *   A Play action that returns JSON on success, or an error response
+    */
+  def authenticate: Action[B] = userAndAuthDataAction.async { request =>
+    apiResponse(
+      "authenticate",
+      request.user,
+      passkeyService
+        .verifyPasskey(request.user.id, request.authenticationData)
+        .map(_ => Json.obj("status" -> "ok"))
+    )
+  }
+
   /** Deletes a passkey for the authenticated user.
     *
     * @param passkeyIdBase64
@@ -123,6 +148,19 @@ class PasskeyController[U: User, B](
       "delete",
       request.user,
       passkeyService.deletePasskey(request.user.id, PasskeyId.fromBase64Url(passkeyIdBase64))
+    )
+  }
+
+  /** Lists all passkeys for the authenticated user.
+    *
+    * @return
+    *   A Play action that returns a JSON array of passkeys, or an error response
+    */
+  def list: Action[Unit] = ctx.userAction.async(parse.empty) { request =>
+    apiResponse(
+      "list",
+      request.user,
+      passkeyService.listPasskeys(request.user.id)
     )
   }
 

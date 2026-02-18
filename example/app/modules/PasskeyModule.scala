@@ -1,17 +1,17 @@
 package modules
 
-import com.google.inject.AbstractModule
-import com.gu.playpasskeyauth.{PasskeyAuth, PasskeyAuthContext}
-import com.gu.playpasskeyauth.models.{HostApp, User as PasskeyUser, WebAuthnConfig}
+import com.google.inject.{AbstractModule, Provides}
+import com.gu.playpasskeyauth.models.{HostApp, WebAuthnConfig, User as PasskeyUser}
 import com.gu.playpasskeyauth.services.{PasskeyChallengeRepository, PasskeyRepository}
 import com.gu.playpasskeyauth.web.*
+import com.gu.playpasskeyauth.{PasskeyAuth, PasskeyAuthContext}
 import models.User
+import play.api.Configuration
 import play.api.libs.json.JsValue
 import play.api.mvc.{ActionBuilder, AnyContent, DefaultActionBuilder, Request}
-import play.api.{Configuration, Environment}
 import services.{InMemoryChallengeRepository, InMemoryPasskeyRepository}
 
-import javax.inject.{Inject, Provider, Singleton}
+import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
 /** Guice module for configuring passkey authentication dependencies. */
@@ -21,23 +21,18 @@ class PasskeyModule extends AbstractModule {
     // Bind repository implementations
     bind(classOf[PasskeyRepository]).to(classOf[InMemoryPasskeyRepository])
     bind(classOf[PasskeyChallengeRepository]).to(classOf[InMemoryChallengeRepository])
-
-    // Bind PasskeyAuth via a provider to inject config
-    bind(classOf[PasskeyAuth[User, AnyContent]]).toProvider(classOf[PasskeyAuthProvider])
   }
-}
 
-/** Provider for PasskeyAuth that reads configuration from application.conf. */
-@Singleton
-class PasskeyAuthProvider @Inject() (
-    config: Configuration,
-    cc: play.api.mvc.ControllerComponents,
-    passkeyRepo: PasskeyRepository,
-    challengeRepo: PasskeyChallengeRepository,
-    ec: ExecutionContext
-) extends Provider[PasskeyAuth[User, AnyContent]] {
-
-  override def get(): PasskeyAuth[User, AnyContent] = {
+  /** Provides a configured PasskeyAuth instance. */
+  @Provides
+  @Singleton
+  def providePasskeyAuth(
+      config: Configuration,
+      cc: play.api.mvc.ControllerComponents,
+      passkeyRepo: PasskeyRepository,
+      challengeRepo: PasskeyChallengeRepository,
+      ec: ExecutionContext
+  ): PasskeyAuth[User, AnyContent] = {
     // Make ExecutionContext and User typeclass available implicitly
     implicit val ecImplicit: ExecutionContext = ec
     val userTypeClass: PasskeyUser[User] = models.User.given_PasskeyUser_User
