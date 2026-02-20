@@ -1,6 +1,5 @@
 package com.gu.playpasskeyauth.filters
 
-import com.gu.playpasskeyauth.PasskeyAuthContext
 import com.gu.playpasskeyauth.models.User
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.RequestWithAuthenticationData
@@ -18,9 +17,6 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * The filter also updates the stored credential metadata (signature counter, last used timestamp) after successful
   * verification to maintain security and provide audit information.
-  *
-  * @tparam U
-  *   The user type for which a [[UserIdExtractor]] must be available.
   *
   * @param verifier
   *   The service that performs passkey verification

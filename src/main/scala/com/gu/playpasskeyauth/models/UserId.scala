@@ -4,7 +4,7 @@ package com.gu.playpasskeyauth.models
   *
   * User IDs are strings that uniquely identify users in the passkey system.
   *
-  * This type is obtained from a user via the [[UserIdExtractor]] function type.
+  * This type is obtained from a user via the [[com.gu.playpasskeyauth.models.User]] typeclass.
   *
   * @param value
   *   The string identifier for the user (must not be empty or blank)
@@ -12,8 +12,11 @@ package com.gu.playpasskeyauth.models
   *   if value is null, empty, or contains only whitespace or leading or trailing whitespace.
   * @example
   *   {{{
-  * // Given a UserIdExtractor for your user type:
-  * given UserIdExtractor[MyUser] = user => UserId(user.email)
+  * // Given a User instance for your user type:
+  * given User[MyUser] with
+  *   extension (user: MyUser)
+  *     def id: UserId = UserId(user.email)
+  *     def displayName: String = user.name
   *
   * // Use the ID in repository operations:
   * def loadPasskey(userId: UserId, passkeyId: PasskeyId): Future[CredentialRecord]

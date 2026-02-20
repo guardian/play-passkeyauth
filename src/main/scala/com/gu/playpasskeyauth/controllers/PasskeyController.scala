@@ -18,15 +18,16 @@ import scala.concurrent.{ExecutionContext, Future}
   *   - Registering new passkey credentials
   *   - Generating authentication options for verifying passkeys
   *
-  * @tparam U
-  *   The user type for which a [[UserIdExtractor]] must be available.
-  *
   * @tparam B
   *   The body content type for the registration action. This is typically the parsed request body type (e.g.,
   *   `AnyContent`, `JsValue`, or a custom type).
   *
   * @param controllerComponents
   *   Play's controller components for request handling
+  *
+  * @param ctx
+  *   The [[com.gu.playpasskeyauth.PasskeyAuthContext]] bundling together the user action builder, data extractors, and
+  *   WebAuthn configuration
   *
   * @param passkeyService
   *   The service that handles passkey operations (creation, registration, verification)

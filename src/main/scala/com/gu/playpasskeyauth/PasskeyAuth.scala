@@ -2,7 +2,7 @@ package com.gu.playpasskeyauth
 
 import com.gu.playpasskeyauth.controllers.PasskeyController
 import com.gu.playpasskeyauth.filters.PasskeyVerificationFilter
-import com.gu.playpasskeyauth.models.{HostApp, User, WebAuthnConfig}
+import com.gu.playpasskeyauth.models.{HostApp, User}
 import com.gu.playpasskeyauth.services.{
   PasskeyChallengeRepository,
   PasskeyRepository,
@@ -20,14 +20,6 @@ import scala.concurrent.ExecutionContext
   * builders, and verification filters. It provides factory methods to create the controller for passkey management and
   * action builders for protecting routes.
   *
-  * @tparam U
-  *   The user type for which a [[UserIdExtractor]] must be available. You must provide an implicit function to extract
-  *   user IDs:
-  *   {{{
-  * case class MyUser(email: String, name: String)
-  * given UserIdExtractor[MyUser] = user => UserId(user.email)
-  *   }}}
-  *
   * @tparam B
   *   The body content type (typically `AnyContent`)
   *
@@ -38,7 +30,7 @@ import scala.concurrent.ExecutionContext
   *   The [[HostApp]] configuration identifying your application (relying party).
   *
   * @param ctx
-  *   Context
+  *   The [[PasskeyAuthContext]] bundling together the user action builder, data extractors, and WebAuthn configuration
   *
   * @param passkeyRepo
   *   Repository for storing passkey credentials. You must implement [[PasskeyRepository]] for your storage backend
@@ -50,16 +42,6 @@ import scala.concurrent.ExecutionContext
   *
   * @param registrationRedirect
   *   Where to redirect after successful passkey registration. Example: `routes.AccountController.settings()`
-  *
-  * Context parameters (provided via `using` clause):
-  *   - `ExecutionContext`: Required for asynchronous operations
-  *   - `PasskeyAuthContext[U, B]`: A typeclass that bundles together all authentication-related components:
-  *     - User type constraint (`User[U]`)
-  *     - User action builder for extracting authenticated users
-  *     - Creation data extractor for `navigator.credentials.create()` responses
-  *     - Authentication data extractor for `navigator.credentials.get()` responses
-  *     - Passkey name extractor for user-provided passkey names
-  *     - WebAuthn configuration (algorithms, timeouts, authenticator selection, etc.)
   *
   * @example
   *   {{{
@@ -81,17 +63,18 @@ import scala.concurrent.ExecutionContext
   *   val userAction = authAction.andThen(new UserAction(userExtractor))
   *
   *   // Bundle all authentication components into a single context
-  *   given PasskeyAuthContext[MyUser, AnyContent] = PasskeyAuthContext(
+  *   val ctx = PasskeyAuthContext(
   *     userAction = userAction,
   *     creationDataExtractor = summon,
   *     authenticationDataExtractor = summon,
   *     passkeyNameExtractor = summon
   *   )
   *
-  *   // Now PasskeyAuth only needs the core dependencies
+  *   // Create PasskeyAuth with all dependencies
   *   val passkeyAuth = new PasskeyAuth[MyUser, AnyContent](
   *     cc,
   *     HostApp("My App", new URI("https://myapp.example.com")),
+  *     ctx,
   *     passkeyRepo,
   *     challengeRepo,
   *     routes.AccountController.settings()

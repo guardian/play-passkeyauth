@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth
 
-import com.gu.playpasskeyauth.models.{User, WebAuthnConfig}
+import com.gu.playpasskeyauth.models.WebAuthnConfig
 import com.gu.playpasskeyauth.web.*
 import play.api.mvc.ActionBuilder
 
@@ -8,9 +8,6 @@ import play.api.mvc.ActionBuilder
   *
   * This typeclass bundles together the action builder and extractors required for passkey authentication. By providing
   * a single `given` instance of this typeclass, you can simplify the dependency injection for PasskeyAuth.
-  *
-  * @tparam U
-  *   The user type for which a [[com.gu.playpasskeyauth.models.User]] instance must be available
   *
   * @tparam B
   *   The body content type (typically `AnyContent`)
@@ -42,22 +39,19 @@ import play.api.mvc.ActionBuilder
   * val userExtractor: UserExtractor[MyUser, AuthenticatedRequest] = _.user
   * val userAction = authAction.andThen(new UserAction(userExtractor))
   *
-  * // Option 1: Explicitly bundle everything together
-  * given PasskeyAuthContext[MyUser, AnyContent] = PasskeyAuthContext(
+  * // Bundle everything together
+  * val ctx = PasskeyAuthContext(
   *   userAction = userAction,
   *   creationDataExtractor = summon,
   *   authenticationDataExtractor = summon,
   *   passkeyNameExtractor = summon
   * )
   *
-  * // Option 2: Use the convenience method to auto-summon extractors
-  * given PasskeyAuthContext[MyUser, AnyContent] =
-  *   PasskeyAuthContext.fromContext(userAction)
-  *
-  * // Now PasskeyAuth only needs ExecutionContext and PasskeyAuthContext
+  * // Pass ctx to PasskeyAuth
   * val passkeyAuth = new PasskeyAuth[MyUser, AnyContent](
   *   cc,
   *   HostApp("My App", new URI("https://myapp.example.com")),
+  *   ctx,
   *   passkeyRepo,
   *   challengeRepo,
   *   routes.AccountController.settings()
