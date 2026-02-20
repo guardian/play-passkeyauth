@@ -1,14 +1,17 @@
 package com.gu.playpasskeyauth.models
-import play.api.libs.json.{JsString, JsValue, Writes}
+
+import play.api.libs.json.{JsString, Writes}
 
 /** Validated and sanitised passkey name.
   *
   * Passkey names are user-provided identifiers that help users recognise their credentials. They are displayed in
   * browser dialogues and stored in the relying party's database, so validation is important for both security and UX.
   *
-  * This is an opaque type that can only be constructed through [[PasskeyName.validate]], ensuring all passkey names in
-  * the system have been validated and sanitised.
+  * This case class can only be constructed through [[PasskeyName.validate]] (which validates) or [[PasskeyName.apply]]
+  * (which throws on invalid input), ensuring all passkey names in the system have been validated and sanitised.
   *
+  * @param value
+  *   The validated and trimmed passkey name string
   * @example
   *   {{{
   * PasskeyName.validate("My YubiKey") match
@@ -16,7 +19,11 @@ import play.api.libs.json.{JsString, JsValue, Writes}
   *   case Left(error) => println(s"Invalid: ${error.message}")
   *   }}}
   */
-opaque type PasskeyName = String
+case class PasskeyName private (value: String) {
+  require(value.trim.nonEmpty, "Passkey name must not be empty")
+  require(value.length <= PasskeyName.MaxLength, s"Passkey name must not exceed ${PasskeyName.MaxLength} characters")
+  require(PasskeyName.AllowedPattern.matches(value), "Passkey name contains invalid characters")
+}
 
 object PasskeyName {
 
@@ -42,6 +49,22 @@ object PasskeyName {
     }
   }
 
+  /** Creates a PasskeyName from a string, throwing an exception if validation fails.
+    *
+    * @param name
+    *   The raw passkey name from user input
+    * @return
+    *   The validated PasskeyName
+    * @throws IllegalArgumentException
+    *   if validation fails
+    */
+  def apply(name: String): PasskeyName = {
+    validate(name) match {
+      case Right(passkeyName) => passkeyName
+      case Left(error)        => throw new IllegalArgumentException(error.message)
+    }
+  }
+
   /** Validates a passkey name.
     *
     * @param name
@@ -54,7 +77,7 @@ object PasskeyName {
     if trimmed.isEmpty then Left(ValidationError.Empty)
     else if trimmed.length > MaxLength then Left(ValidationError.TooLong(MaxLength))
     else if !AllowedPattern.matches(trimmed) then Left(ValidationError.InvalidCharacters)
-    else Right(trimmed)
+    else Right(new PasskeyName(trimmed))
   }
 
   /** Checks if a passkey name is valid without returning the sanitised value.
@@ -67,11 +90,4 @@ object PasskeyName {
   def isValid(name: String): Boolean = validate(name).isRight
 
   given Writes[PasskeyName] = Writes { name => JsString(name.value) }
-
-  /** Extension methods for PasskeyName */
-  extension (name: PasskeyName) {
-
-    /** Returns the underlying string value */
-    def value: String = name
-  }
 }

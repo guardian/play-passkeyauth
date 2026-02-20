@@ -1,0 +1,24 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /                           controllers.HomeController.index()
+
+# Passkey registration flow
+GET     /register/options           controllers.PasskeyController.creationOptions()
+POST    /register                   controllers.PasskeyController.register()
+
+# Passkey authentication flow
+GET     /auth/options               controllers.PasskeyController.authenticationOptions()
+POST    /auth                       controllers.PasskeyController.authenticate()
+
+# Sensitive endpoint (requires passkey verification)
+POST    /verify                     controllers.PasskeyController.verifySensitiveAction()
+
+# Passkey management
+GET     /passkeys                   controllers.PasskeyController.list()
+DELETE  /passkeys/:id               controllers.PasskeyController.delete(id: String)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

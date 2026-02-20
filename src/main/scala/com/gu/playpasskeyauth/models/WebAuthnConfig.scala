@@ -1,5 +1,6 @@
 package com.gu.playpasskeyauth.models
 
+import com.webauthn4j.WebAuthnManager
 import com.webauthn4j.data.*
 import com.webauthn4j.data.PublicKeyCredentialHints.{CLIENT_DEVICE, HYBRID, SECURITY_KEY}
 import com.webauthn4j.data.PublicKeyCredentialType.PUBLIC_KEY
@@ -16,6 +17,11 @@ import scala.concurrent.duration.{Duration, SECONDS}
   *
   * This class captures all the static configuration needed for WebAuthn credential creation and authentication. All
   * values are immutable and pure, containing no side effects.
+  *
+  * @param manager
+  *   The WebAuthn4J manager that performs the core registration and authentication verification logic. Defaults to
+  *   `WebAuthnManager.createNonStrictWebAuthnManager()` in [[WebAuthnConfig.default]]. Can be replaced with a strict
+  *   manager or a custom implementation for advanced use cases.
   *
   * @param publicKeyCredentialParameters
   *   List of acceptable public key algorithms in order of preference. Defaults to EdDSA, ES256, and RS256 for broad
@@ -57,6 +63,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
   *   Optional set of allowed authenticator transports. None means all transports are allowed.
   */
 case class WebAuthnConfig(
+    manager: WebAuthnManager,
     publicKeyCredentialParameters: List[PublicKeyCredentialParameters],
     timeout: Duration,
     authenticatorSelectionCriteria: AuthenticatorSelectionCriteria,
@@ -113,6 +120,7 @@ object WebAuthnConfig {
     }
 
     WebAuthnConfig(
+      manager = WebAuthnManager.createNonStrictWebAuthnManager(),
       publicKeyCredentialParameters = publicKeyCredentialParameters,
       timeout = Duration(60, SECONDS),
       authenticatorSelectionCriteria = authenticatorSelectionCriteria,

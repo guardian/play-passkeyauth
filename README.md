@@ -27,16 +27,33 @@ Add to your `build.sbt`:
 libraryDependencies += "com.gu" %% "play-passkey-auth" % "<version>"
 ```
 
+## Quick start
+
+See the [example](example/) directory for a complete, working Play application that demonstrates:
+- Registering new passkeys
+- Authenticating with passkeys
+- Managing (listing and deleting) passkeys
+- In-memory repository implementations
+
+Run the example:
+```bash
+sbt "project example" run
+```
+
+Then open http://localhost:9000 in your browser.
+
 ## Integration steps
 
-1. Define a [PasskeyUser](src/main/scala/com/gu/playpasskeyauth/models/PasskeyUser.scala) instance for your user type.
+1. Define a [User](src/main/scala/com/gu/playpasskeyauth/models/User.scala) instance for your user type.
 2. Implement a [PasskeyRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyRepository.scala).
 3. Implement a [PasskeyChallengeRepository](src/main/scala/com/gu/playpasskeyauth/services/PasskeyChallengeRepository.scala).
 4. Implement a [CreationDataExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).
 5. Implement an [AuthenticationDataExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithAuthenticationData.scala).
 6. Implement a [PasskeyNameExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).
 7. Implement a [UserExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithUser.scala).
-8. Pass these as arguments into a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala).
+8. Bundle the extractors and user action into a [PasskeyAuthContext](src/main/scala/com/gu/playpasskeyauth/PasskeyAuthContext.scala).
+9. Create a [HostApp](src/main/scala/com/gu/playpasskeyauth/models/HostApp.scala) describing your application (name and URI).
+10. Pass the repositories, `HostApp`, and `PasskeyAuthContext` into a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala).
 
 ## Integration examples
  show actual Scala/Play code

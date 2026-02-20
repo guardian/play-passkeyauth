@@ -1,9 +1,8 @@
 package com.gu.playpasskeyauth.filters
 
-import com.gu.playpasskeyauth.models.PasskeyUser
+import com.gu.playpasskeyauth.models.User
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.RequestWithAuthenticationData
-import com.webauthn4j.data.AuthenticationData
 import play.api.Logging
 import play.api.mvc.Results.{BadRequest, InternalServerError}
 import play.api.mvc.{ActionFilter, Result}
@@ -19,34 +18,31 @@ import scala.concurrent.{ExecutionContext, Future}
   * The filter also updates the stored credential metadata (signature counter, last used timestamp) after successful
   * verification to maintain security and provide audit information.
   *
-  * @tparam U
-  *   The user type, which must have a [[PasskeyUser]] type class instance.
-  *
   * @param verifier
   *   The service that performs passkey verification
   *
   * @see
   *   [[https://webauthn4j.github.io/webauthn4j/en/#webauthn-assertion-verification-and-post-processing]]
   */
-class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationService[U])(using
+class PasskeyVerificationFilter[U: User](verifier: PasskeyVerificationService)(using
     val executionContext: ExecutionContext
 ) extends ActionFilter[[A] =>> RequestWithAuthenticationData[U, A]]
     with Logging {
 
   def filter[A](request: RequestWithAuthenticationData[U, A]): Future[Option[Result]] = {
-    val userId = request.user.id.value
+    val userId = request.user.id
     verifier
-      .verify(request.user, request.authenticationData)
+      .verifyPasskey(userId, request.authenticationData)
       .map { _ =>
-        logger.info(s"verify: $userId: Verified passkey")
+        logger.info(s"verify: ${userId.value}: Verified passkey")
         None
       }
       .recover {
         case e: PasskeyException =>
-          logger.warn(s"verify: $userId: Domain error: ${e.getMessage}")
+          logger.warn(s"verify: ${userId.value}: Domain error: ${e.getMessage}")
           Some(BadRequest("Something went wrong"))
         case e =>
-          logger.error(s"verify: $userId: Failure: ${e.getMessage}", e)
+          logger.error(s"verify: ${userId.value}: Failure: ${e.getMessage}", e)
           Some(InternalServerError("Something went wrong"))
       }
   }

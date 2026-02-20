@@ -1,7 +1,6 @@
 package com.gu.playpasskeyauth.services
 
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyId, PasskeyInfo, PasskeyName, PasskeyUser, UserId, WebAuthnConfig}
-import com.webauthn4j.WebAuthnManager
+import com.gu.playpasskeyauth.models.*
 import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
 import com.webauthn4j.data.*
 import com.webauthn4j.data.client.challenge.{Challenge, DefaultChallenge}
@@ -13,45 +12,42 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
-private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
+private[playpasskeyauth] class PasskeyVerificationServiceImpl(
     app: HostApp,
     passkeyRepo: PasskeyRepository,
     challengeRepo: PasskeyChallengeRepository,
-    config: WebAuthnConfig = WebAuthnConfig.default,
+    webAuthn: WebAuthnConfig = WebAuthnConfig.default,
     generateChallenge: () => Challenge = () => new DefaultChallenge(),
     clock: Clock = Clock.systemUTC()
 )(using ExecutionContext)
-    extends PasskeyVerificationService[U] {
+    extends PasskeyVerificationService {
 
-  private val webAuthnManager = WebAuthnManager.createNonStrictWebAuthnManager()
-
-  private val relyingParty = new PublicKeyCredentialRpEntity(app.host, app.name)
-
-  def buildCreationOptions(user: U): Future[PublicKeyCredentialCreationOptions] =
+  override def buildCreationOptions(userId: UserId, userName: String): Future[PublicKeyCredentialCreationOptions] =
     for {
-      passkeyIds <- passkeyRepo.loadPasskeyIds(user.id)
+      passkeys <- passkeyRepo.list(userId)
+      passkeyIds = passkeys.map(_.id)
       challenge = generateChallenge()
-      expiresAt = clock.instant().plusMillis(config.timeout.toMillis)
-      _ <- challengeRepo.insertRegistrationChallenge(user.id, challenge, expiresAt)
+      expiresAt = clock.instant().plusMillis(webAuthn.timeout.toMillis)
+      _ <- challengeRepo.insertRegistrationChallenge(userId, challenge, expiresAt)
     } yield {
-      val userInfo = new PublicKeyCredentialUserEntity(user.id.bytes, user.id.value, user.id.value)
+      val userInfo = new PublicKeyCredentialUserEntity(userId.bytes, userId.value, userName)
       val excludeCredentials = passkeyIds.map(toDescriptor)
       new PublicKeyCredentialCreationOptions(
         relyingParty,
         userInfo,
         challenge,
-        config.publicKeyCredentialParameters.asJava,
-        config.timeout.toMillis,
+        webAuthn.publicKeyCredentialParameters.asJava,
+        webAuthn.timeout.toMillis,
         excludeCredentials.asJava,
-        config.authenticatorSelectionCriteria,
-        config.hints.asJava,
-        config.attestation,
-        config.creationExtensions.orNull
+        webAuthn.authenticatorSelectionCriteria,
+        webAuthn.hints.asJava,
+        webAuthn.attestation,
+        webAuthn.creationExtensions.orNull
       )
     }
 
-  def register(
-      user: U,
+  override def registerPasskey(
+      userId: UserId,
       passkeyName: String,
       creationResponse: JsValue
   ): Future[CredentialRecord] =
@@ -61,23 +57,22 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         case Right(name) => Future.successful(name)
         case Left(error) => Future.failed(PasskeyException(PasskeyError.InvalidName(error)))
       }
-      // Check for duplicate name (potential race condition - ideally handled at DB level)
-      _ <- passkeyRepo
-        .loadPasskeyNames(user.id)
-        .flatMap(names =>
-          if names.contains(validatedName.value) then
-            Future.failed(PasskeyException(PasskeyError.DuplicateName(validatedName.value)))
-          else Future.successful(())
-        )
-      challenge <- challengeRepo.loadRegistrationChallenge(user.id)
+      // Check for duplicate name (potential race condition here to sort out)
+      existingPasskeys <- passkeyRepo.list(userId)
+      _ <-
+        if existingPasskeys.exists(_.name.value == validatedName.value) then
+          Future.failed(PasskeyException(PasskeyError.DuplicateName(validatedName.value)))
+        else Future.successful(())
+
+      challenge <- challengeRepo.loadRegistrationChallenge(userId)
       verified <- Future.fromTry(
         Try(
-          webAuthnManager.verifyRegistrationResponseJSON(
+          webAuthn.manager.verifyRegistrationResponseJSON(
             creationResponse.toString,
             new RegistrationParameters(
               ServerProperty.builder.origin(app.origin).rpId(app.host).challenge(challenge).build(),
-              config.publicKeyCredentialParameters.asJava,
-              config.userVerificationRequired
+              webAuthn.publicKeyCredentialParameters.asJava,
+              webAuthn.userVerificationRequired
             )
           )
         )
@@ -88,69 +83,73 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl[U: PasskeyUser](
         verified.getClientExtensions,
         verified.getTransports
       )
-      _ <- passkeyRepo.insertPasskey(user.id, validatedName.value, credentialRecord)
-      _ <- challengeRepo.deleteRegistrationChallenge(user.id)
+      passkeyId = PasskeyId(
+        verified.getAttestationObject.getAuthenticatorData.getAttestedCredentialData.getCredentialId
+      )
+      newPasskey = Passkey.fromRegistration(passkeyId, validatedName, credentialRecord, clock)
+      _ <- passkeyRepo.upsert(userId, newPasskey)
+      _ <- challengeRepo.deleteRegistrationChallenge(userId)
     } yield credentialRecord
 
-  def buildAuthenticationOptions(user: U): Future[PublicKeyCredentialRequestOptions] =
+  override def buildAuthenticationOptions(userId: UserId): Future[PublicKeyCredentialRequestOptions] =
     for {
-      passkeyIds <- passkeyRepo.loadPasskeyIds(user.id)
+      passkeys <- passkeyRepo.list(userId)
+      passkeyIds = passkeys.map(_.id)
       challenge = generateChallenge()
-      expiresAt = clock.instant().plusMillis(config.timeout.toMillis)
-      _ <- challengeRepo.insertAuthenticationChallenge(user.id, challenge, expiresAt)
+      expiresAt = clock.instant().plusMillis(webAuthn.timeout.toMillis)
+      _ <- challengeRepo.insertAuthenticationChallenge(userId, challenge, expiresAt)
     } yield {
       val rpId = app.host
       val allowCredentials = passkeyIds.map(toDescriptor)
       new PublicKeyCredentialRequestOptions(
         challenge,
-        config.timeout.toMillis,
+        webAuthn.timeout.toMillis,
         rpId,
         allowCredentials.asJava,
-        config.userVerification,
-        config.hints.asJava,
-        config.authExtensions.orNull
+        webAuthn.userVerification,
+        webAuthn.hints.asJava,
+        webAuthn.authExtensions.orNull
       )
     }
 
-  def verify(user: U, authenticationResponse: JsValue): Future[AuthenticationData] =
+  override def verifyPasskey(userId: UserId, authenticationResponse: JsValue): Future[AuthenticationData] =
     for {
-      challenge <- challengeRepo.loadAuthenticationChallenge(user.id)
-      authData <- Future.fromTry(Try(webAuthnManager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
+      challenge <- challengeRepo.loadAuthenticationChallenge(userId)
+      authData <- Future.fromTry(Try(webAuthn.manager.parseAuthenticationResponseJSON(authenticationResponse.toString)))
       credentialId = PasskeyId(authData.getCredentialId)
-      credentialRecord <- passkeyRepo.loadPasskey(user.id, credentialId)
+      passkey <- passkeyRepo.get(userId, credentialId)
       verifiedAuthData <- Future.fromTry(
         Try(
-          webAuthnManager.verify(
+          webAuthn.manager.verify(
             authData,
             new AuthenticationParameters(
               ServerProperty.builder.origin(app.origin).rpId(app.host).challenge(challenge).build(),
-              credentialRecord,
+              passkey.credentialRecord,
               List(authData.getCredentialId).asJava,
-              config.userVerificationRequired
+              webAuthn.userVerificationRequired
             )
           )
         )
       )
       verifiedCredentialId = PasskeyId(verifiedAuthData.getCredentialId)
-      _ <- challengeRepo.deleteAuthenticationChallenge(user.id)
-      _ <- passkeyRepo.updateAuthenticationCount(
-        user.id,
-        verifiedCredentialId,
-        verifiedAuthData.getAuthenticatorData.getSignCount
-      )
-      _ <- passkeyRepo.updateLastUsedTime(user.id, verifiedCredentialId, clock.instant())
+      newSignCount = verifiedAuthData.getAuthenticatorData.getSignCount
+      updatedPasskey = passkey.recordAuthentication(newSignCount, clock)
+      _ <- challengeRepo.deleteAuthenticationChallenge(userId)
+      _ <- passkeyRepo.upsert(userId, updatedPasskey)
     } yield verifiedAuthData
 
-  def listPasskeys(user: U): Future[List[PasskeyInfo]] =
-    passkeyRepo.listPasskeys(user.id)
+  override def listPasskeys(userId: UserId): Future[List[Passkey]] =
+    passkeyRepo.list(userId)
 
-  def deletePasskey(user: U, passkeyId: PasskeyId): Future[Unit] =
-    passkeyRepo.deletePasskey(user.id, passkeyId)
+  override def deletePasskey(userId: UserId, passkeyId: PasskeyId): Future[Unit] =
+    passkeyRepo.delete(userId, passkeyId)
+
+  private val relyingParty = new PublicKeyCredentialRpEntity(app.host, app.name)
 
   private def toDescriptor(passkeyId: PasskeyId): PublicKeyCredentialDescriptor =
     new PublicKeyCredentialDescriptor(
-      config.credentialType,
+      webAuthn.credentialType,
       passkeyId.bytes,
-      config.transports.map(_.asJava).orNull
+      webAuthn.transports.map(_.asJava).orNull
     )
 }
