@@ -51,7 +51,9 @@ Then open http://localhost:9000 in your browser.
 5. Implement an [AuthenticationDataExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithAuthenticationData.scala).
 6. Implement a [PasskeyNameExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithCreationData.scala).
 7. Implement a [UserExtractor](src/main/scala/com/gu/playpasskeyauth/web/RequestWithUser.scala).
-8. Pass these as arguments into a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala).
+8. Bundle the extractors and user action into a [PasskeyAuthContext](src/main/scala/com/gu/playpasskeyauth/PasskeyAuthContext.scala).
+9. Create a [HostApp](src/main/scala/com/gu/playpasskeyauth/models/HostApp.scala) describing your application (name and URI).
+10. Pass the repositories, `HostApp`, and `PasskeyAuthContext` into a [PasskeyAuth](src/main/scala/com/gu/playpasskeyauth/PasskeyAuth.scala).
 
 ## Integration examples
  show actual Scala/Play code
