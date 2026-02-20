@@ -8,7 +8,7 @@ import com.gu.playpasskeyauth.{PasskeyAuth, PasskeyAuthContext}
 import models.User
 import play.api.Configuration
 import play.api.libs.json.JsValue
-import play.api.mvc.{ActionBuilder, AnyContent, DefaultActionBuilder, Request}
+import play.api.mvc.{AnyContent, DefaultActionBuilder, Request}
 import services.{InMemoryChallengeRepository, InMemoryPasskeyRepository}
 
 import javax.inject.Singleton
@@ -33,67 +33,52 @@ class PasskeyModule extends AbstractModule {
       challengeRepo: PasskeyChallengeRepository,
       ec: ExecutionContext
   ): PasskeyAuth[User, AnyContent] = {
-    // Make ExecutionContext and User typeclass available implicitly
-    implicit val ecImplicit: ExecutionContext = ec
-    val userTypeClass: PasskeyUser[User] = models.User.given_PasskeyUser_User
-
+    given ecImplicit: ExecutionContext = ec
     val appName = config.get[String]("passkey.app.name")
     val appOrigin = config.get[String]("passkey.app.origin")
 
     val hostApp = HostApp(appName, new java.net.URI(appOrigin))
 
-    // Create user action that extracts the demo user from requests
-    given UserExtractor[User, [A] =>> Request[A]] with {
+    // Extractors to get data from a request
+    val userExtractor = new UserExtractor[User, [A] =>> Request[A]] {
       def extractUser[A](request: Request[A]): User = User.demo
     }
 
-    // Compose default action builder with UserAction
-    val defaultAction = DefaultActionBuilder(cc.parsers.default)
-    val userAction: ActionBuilder[[A] =>> RequestWithUser[User, A], AnyContent] =
-      defaultAction.andThen(new UserAction(summon[UserExtractor[User, [A] =>> Request[A]]]))
-
-    // Create extractors for creation and authentication data
-    given CreationDataExtractor[[A] =>> RequestWithUser[User, A]] with {
-      def findCreationData[A](request: RequestWithUser[User, A]): Option[JsValue] = {
+    val creationDataExtractor = new CreationDataExtractor[[A] =>> RequestWithUser[User, A]] {
+      def findCreationData[A](request: RequestWithUser[User, A]): Option[JsValue] =
         request.body match {
-          case body: AnyContent =>
-            body.asJson.flatMap(json => (json \ "credential").asOpt[JsValue])
-          case _ => None
+          case body: AnyContent => body.asJson.flatMap(json => (json \ "credential").asOpt[JsValue])
+          case _                => None
         }
-      }
     }
 
-    given AuthenticationDataExtractor[[A] =>> RequestWithUser[User, A]] with {
-      def findAuthenticationData[A](request: RequestWithUser[User, A]): Option[JsValue] = {
+    val authDataExtractor = new AuthenticationDataExtractor[[A] =>> RequestWithUser[User, A]] {
+      def findAuthenticationData[A](request: RequestWithUser[User, A]): Option[JsValue] =
         request.body match {
-          case body: AnyContent =>
-            body.asJson.flatMap(json => (json \ "assertion").asOpt[JsValue])
-          case _ => None
+          case body: AnyContent => body.asJson.flatMap(json => (json \ "assertion").asOpt[JsValue])
+          case _                => None
         }
-      }
     }
 
-    given PasskeyNameExtractor[[A] =>> RequestWithUser[User, A]] with {
-      def findPasskeyName[A](request: RequestWithUser[User, A]): Option[String] = {
+    val passkeyNameExtractor = new PasskeyNameExtractor[[A] =>> RequestWithUser[User, A]] {
+      def findPasskeyName[A](request: RequestWithUser[User, A]): Option[String] =
         request.body match {
-          case body: AnyContent =>
-            body.asJson.flatMap(json => (json \ "name").asOpt[String])
-          case _ => None
+          case body: AnyContent => body.asJson.flatMap(json => (json \ "name").asOpt[String])
+          case _                => None
         }
-      }
     }
 
     // Create the context bundling everything together
     val passKeyAuthContext: PasskeyAuthContext[User, AnyContent] = PasskeyAuthContext(
-      userAction = userAction,
-      creationDataExtractor = summon,
-      authenticationDataExtractor = summon,
-      passkeyNameExtractor = summon,
+      userAction = DefaultActionBuilder(cc.parsers.default).andThen(new UserAction(userExtractor)),
+      creationDataExtractor = creationDataExtractor,
+      authenticationDataExtractor = authDataExtractor,
+      passkeyNameExtractor = passkeyNameExtractor,
       webAuthnConfig = WebAuthnConfig.default
     )
 
     // Ensure the User typeclass is in implicit scope for the PasskeyAuth constructor
-    given PasskeyUser[User] = userTypeClass
+    given PasskeyUser[User] = models.User.given_PasskeyUser_User
 
     new PasskeyAuth(
       cc,
