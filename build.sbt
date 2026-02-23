@@ -19,7 +19,7 @@ val playVersion = "3.0.10"
  * 3. If no earlier version appears in the dependency list, the entry can be removed.
  */
 val safeTransitiveDependencies = {
-  val jacksonVersion = "2.21.0"
+  val jacksonVersion = "2.21.1"
   Seq(
     "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion % Runtime,
     "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonVersion % Runtime,
