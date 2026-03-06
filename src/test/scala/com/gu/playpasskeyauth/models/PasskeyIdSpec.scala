@@ -43,4 +43,23 @@ class PasskeyIdSpec extends AnyFlatSpec with Matchers {
     val passkeyId = PasskeyId(bytes)
     passkeyId.bytes shouldBe bytes
   }
+
+  "PasskeyId.equals" should "be true for two PasskeyIds with the same bytes" in {
+    val bytes = Array[Byte](1, 2, 3)
+    PasskeyId(bytes) shouldEqual PasskeyId(bytes.clone())
+  }
+
+  it should "be false for two PasskeyIds with different bytes" in {
+    PasskeyId(Array[Byte](1, 2, 3)) should not equal PasskeyId(Array[Byte](4, 5, 6))
+  }
+
+  "PasskeyId.hashCode" should "be equal for two PasskeyIds with the same bytes" in {
+    val bytes = Array[Byte](7, 8, 9)
+    PasskeyId(bytes).hashCode() shouldEqual PasskeyId(bytes.clone()).hashCode()
+  }
+
+  "PasskeyId.toString" should "include the base64url representation" in {
+    val passkeyId = PasskeyId("test".getBytes("UTF-8"))
+    passkeyId.toString shouldBe s"PasskeyId(${passkeyId.toBase64Url})"
+  }
 }

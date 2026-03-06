@@ -49,12 +49,6 @@ class PasskeyController @Inject() (
     */
   def authenticationOptions(): Action[Unit] = controller.authenticationOptions
 
-  /** POST /auth
-    *
-    * Verifies a passkey authentication assertion from the browser.
-    */
-  def authenticate(): Action[AnyContent] = controller.authenticate
-
   /** DELETE /passkeys/:id
     *
     * Deletes a passkey for the current user.

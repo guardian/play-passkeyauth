@@ -2,11 +2,11 @@ package com.gu.playpasskeyauth.controllers
 
 import com.gu.playpasskeyauth.PasskeyAuthContext
 import com.gu.playpasskeyauth.models.JsonEncodings.given
-import com.gu.playpasskeyauth.models.{PasskeyId, User}
+import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyUser}
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
-import com.gu.playpasskeyauth.web.{AuthenticationDataAction, CreationDataAction}
+import com.gu.playpasskeyauth.web.{CreationDataAction, UserAction}
 import play.api.Logging
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.Writes
 import play.api.mvc.*
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,8 +26,8 @@ import scala.concurrent.{ExecutionContext, Future}
   *   Play's controller components for request handling
   *
   * @param ctx
-  *   The [[com.gu.playpasskeyauth.PasskeyAuthContext]] bundling together the user action builder, data extractors, and
-  *   WebAuthn configuration
+  *   The [[com.gu.playpasskeyauth.PasskeyAuthContext]] bundling together the action builder, user extractor, data
+  *   extractors, and WebAuthn configuration
   *
   * @param passkeyService
   *   The service that handles passkey operations (creation, registration, verification)
@@ -36,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
   *   The [[Call]] to redirect to after successful passkey registration. For example:
   *   `routes.DashboardController.index()` or `Call("GET", "/dashboard")`
   */
-class PasskeyController[U: User, B](
+class PasskeyController[U: PasskeyUser, B](
     controllerComponents: ControllerComponents,
     ctx: PasskeyAuthContext[U, B],
     passkeyService: PasskeyVerificationService,
@@ -45,10 +45,9 @@ class PasskeyController[U: User, B](
     extends AbstractController(controllerComponents)
     with Logging {
 
-  private val creationDataAction = new CreationDataAction[U](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
-  private val userAndCreationDataAction = ctx.userAction.andThen(creationDataAction)
-  private val authDataAction = new AuthenticationDataAction[U](ctx.authenticationDataExtractor)
-  private val userAndAuthDataAction = ctx.userAction.andThen(authDataAction)
+  private val userAction = ctx.actionBuilder.andThen(new UserAction[U](ctx.userExtractor))
+  private val creationDataAction = new CreationDataAction[U, B](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
+  private val userAndCreationDataAction = userAction.andThen(creationDataAction)
 
   /** Generates the options required to create a new passkey credential.
     *
@@ -64,7 +63,7 @@ class PasskeyController[U: User, B](
     * @return
     *   A Play action that returns the creation options as JSON, or an error response
     */
-  def creationOptions: Action[Unit] = ctx.userAction.async(parse.empty) { request =>
+  def creationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
     apiResponse(
       "creationOptions",
       request.user,
@@ -109,30 +108,11 @@ class PasskeyController[U: User, B](
     * @return
     *   A Play action that returns the authentication options as JSON, or an error response
     */
-  def authenticationOptions: Action[Unit] = ctx.userAction.async(parse.empty) { request =>
-    apiResponse("authenticationOptions", request.user, passkeyService.buildAuthenticationOptions(request.user.id))
-  }
-
-  /** Verifies a passkey authentication assertion submitted by the browser.
-    *
-    * This endpoint receives the credential assertion created by `navigator.credentials.get()` in the browser. The
-    * request must contain the assertion data from the WebAuthn API.
-    *
-    * On success, returns a 200 JSON response. On failure, returns a 400 or 500 error response.
-    *
-    * @see
-    *   [[https://webauthn4j.github.io/webauthn4j/en/#verifying-the-webauthn-assertion]]
-    *
-    * @return
-    *   A Play action that returns JSON on success, or an error response
-    */
-  def authenticate: Action[B] = userAndAuthDataAction.async { request =>
+  def authenticationOptions: Action[Unit] = userAction.async(parse.empty) { request =>
     apiResponse(
-      "authenticate",
+      "authenticationOptions",
       request.user,
-      passkeyService
-        .verifyPasskey(request.user.id, request.authenticationData)
-        .map(_ => Json.obj("status" -> "ok"))
+      passkeyService.buildAuthenticationOptions(request.user.id)
     )
   }
 
@@ -144,7 +124,7 @@ class PasskeyController[U: User, B](
     * @return
     *   A Play action that returns NoContent on success, or an error response
     */
-  def delete(passkeyIdBase64: String): Action[Unit] = ctx.userAction.async(parse.empty) { request =>
+  def delete(passkeyIdBase64: String): Action[Unit] = userAction.async(parse.empty) { request =>
     apiResponse(
       "delete",
       request.user,
@@ -157,7 +137,7 @@ class PasskeyController[U: User, B](
     * @return
     *   A Play action that returns a JSON array of passkeys, or an error response
     */
-  def list: Action[Unit] = ctx.userAction.async(parse.empty) { request =>
+  def list: Action[Unit] = userAction.async(parse.empty) { request =>
     apiResponse(
       "list",
       request.user,
@@ -173,10 +153,10 @@ class PasskeyController[U: User, B](
       user,
       fa.map {
         case () =>
-          logger.info(s"$action: ${user.id}: Success")
+          logger.info(s"$action: ${user.id.value}: Success")
           NoContent
         case a =>
-          logger.info(s"$action: ${user.id}: Success")
+          logger.info(s"$action: ${user.id.value}: Success")
           Ok(writer.writes(a))
       }
     )
@@ -192,7 +172,7 @@ class PasskeyController[U: User, B](
       action,
       user,
       fa.map { _ =>
-        logger.info(s"$action: ${user.id}: Success")
+        logger.info(s"$action: ${user.id.value}: Success")
         Redirect(redirect)
       }
     )
@@ -201,10 +181,10 @@ class PasskeyController[U: User, B](
   private def apiResponse(action: String, user: U, fresult: => Future[Result]): Future[Result] = {
     fresult.recover {
       case e: PasskeyException =>
-        logger.warn(s"$action: ${user.id}: Domain error: ${e.getMessage}")
+        logger.warn(s"$action: ${user.id.value}: Domain error: ${e.getMessage}")
         BadRequest("Something went wrong")
       case e =>
-        logger.error(s"$action: ${user.id}: Failure: ${e.getMessage}", e)
+        logger.error(s"$action: ${user.id.value}: Failure: ${e.getMessage}", e)
         InternalServerError("Something went wrong")
     }
   }

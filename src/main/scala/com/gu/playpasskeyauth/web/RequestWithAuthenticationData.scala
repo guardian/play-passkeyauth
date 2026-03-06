@@ -33,64 +33,34 @@ case class RequestWithAuthenticationData[U, A](
     request: Request[A]
 ) extends WrappedRequest[A](request)
 
-/** Extractor for WebAuthn authentication data from a request.
+/** Extracts passkey authentication data from a [[RequestWithUser]].
   *
-  * Implementations define how to find the JSON data returned by `navigator.credentials.get()` in the browser. This data
-  * is typically sent in the request body or as a header.
-  *
-  * @tparam R
-  *   The request type (must be a subtype of Play's `Request`)
-  *
-  * @example
-  *   {{{
-  * // Extract authentication data from a JSON request body
-  * given AuthenticationDataExtractor[[A] =>> RequestWithUser[MyUser, A]] with {
-  *   def findAuthenticationData[A](request: RequestWithUser[MyUser, A]): Option[JsValue] = {
-  *     request.body match {
-  *       case body: AnyContent => body.asJson.flatMap(json => (json \ "assertion").toOption)
-  *       case _ => None
-  *     }
-  *   }
-  * }
-  *
-  * // Or extract from a custom header (if sending as base64-encoded JSON)
-  * given AuthenticationDataExtractor[[A] =>> RequestWithUser[MyUser, A]] with {
-  *   def findAuthenticationData[A](request: RequestWithUser[MyUser, A]): Option[JsValue] = {
-  *     request.headers.get("X-Passkey-Assertion")
-  *       .map(base64 => Json.parse(Base64.getDecoder.decode(base64)))
-  *   }
-  * }
-  *   }}}
+  * ==Type-safety note==
+  * `ActionRefiner` requires a polymorphic `refine[A]`, but the extractor needs a concrete `Request[B]`. We bridge this
+  * with a single `asInstanceOf[RequestWithUser[U, B]]` cast. This is safe because:
+  *   1. On the JVM, `RequestWithUser[U, A]` and `RequestWithUser[U, B]` erase to the same type — the cast never fails
+  *      at runtime regardless of what `A` is.
+  *   2. `AuthenticationDataAction[U, B]` is `private[playpasskeyauth]` — it is only ever constructed inside
+  *      [[com.gu.playpasskeyauth.PasskeyAuth]], which holds the same `B` in scope.
+  *   3. It is only ever composed via `andThen` onto an `ActionBuilder[Request, B]`, so the Play framework guarantees
+  *      the actual runtime body is of type `B` for every call to `refine`.
+  *   4. The cast is used only to satisfy the extractor's `Request[B]` parameter; all further work (building the result)
+  *      uses the original uncast `request`.
   */
-trait AuthenticationDataExtractor[R[_] <: Request[_]] {
-  def findAuthenticationData[A](request: R[A]): Option[JsValue]
-}
-
-/** Action refiner that extracts passkey authentication data from a [[RequestWithUser]].
-  *
-  * This action refiner is used during passkey authentication to extract the credential assertion response from the
-  * browser. If the authentication data is missing, a `BadRequest` response is returned.
-  *
-  * @tparam U
-  *   The user type
-  *
-  * @param authDataExtractor
-  *   Strategy for extracting the WebAuthn assertion response JSON
-  *
-  * @param executionContext
-  *   The execution context for async operations
-  */
-class AuthenticationDataAction[U](
-    authDataExtractor: AuthenticationDataExtractor[[A] =>> RequestWithUser[U, A]]
+private[playpasskeyauth] class AuthenticationDataAction[U, B](
+    findAuthenticationData: Request[B] => Option[JsValue]
 )(using val executionContext: ExecutionContext)
     extends ActionRefiner[[A] =>> RequestWithUser[U, A], [A] =>> RequestWithAuthenticationData[U, A]] {
 
-  protected def refine[A](request: RequestWithUser[U, A]): Future[Either[Result, RequestWithAuthenticationData[U, A]]] =
-    authDataExtractor.findAuthenticationData(request) match {
+  protected def refine[A](
+      request: RequestWithUser[U, A]
+  ): Future[Either[Result, RequestWithAuthenticationData[U, A]]] = {
+    // Safe: see class scaladoc. The cast is purely a type-level bridge; the object is unchanged.
+    val typedRequest = request.asInstanceOf[RequestWithUser[U, B]]
+    findAuthenticationData(typedRequest) match {
       case Some(jsValue) =>
-        Future.successful(
-          Right(RequestWithAuthenticationData(jsValue, request.user, request))
-        )
+        Future.successful(Right(RequestWithAuthenticationData(jsValue, request.user, request)))
       case None => Future.successful(Left(BadRequest("Expected authentication data")))
     }
+  }
 }

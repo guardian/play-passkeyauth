@@ -41,6 +41,25 @@ object JsonEncodings {
     )
   }
 
+  // Play JSON Reads for consumer repository implementations
+
+  given Reads[PasskeyId] = Reads { json =>
+    json.validate[String].map(PasskeyId.fromBase64Url)
+  }
+
+  given Reads[PasskeyName] = Reads { json =>
+    json.validate[String].flatMap { raw =>
+      PasskeyName.validate(raw) match {
+        case Right(name) => JsSuccess(name)
+        case Left(error) => JsError(error.message)
+      }
+    }
+  }
+
+  given Reads[UserId] = Reads { json =>
+    json.validate[String].map(UserId(_))
+  }
+
   /** Convert any object to a JSON string using Jackson.
     *
     * This is useful for serializing WebAuthn4j objects that have Jackson annotations.

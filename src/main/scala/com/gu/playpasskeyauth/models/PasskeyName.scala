@@ -19,11 +19,7 @@ import play.api.libs.json.{JsString, Writes}
   *   case Left(error) => println(s"Invalid: ${error.message}")
   *   }}}
   */
-case class PasskeyName private (value: String) {
-  require(value.trim.nonEmpty, "Passkey name must not be empty")
-  require(value.length <= PasskeyName.MaxLength, s"Passkey name must not exceed ${PasskeyName.MaxLength} characters")
-  require(PasskeyName.AllowedPattern.matches(value), "Passkey name contains invalid characters")
-}
+case class PasskeyName private (value: String)
 
 object PasskeyName {
 
