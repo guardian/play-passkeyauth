@@ -145,16 +145,16 @@ class PasskeyNameSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyC
     }
   }
 
-  "ValidationError.Empty.message" should "describe the empty error" in {
-    PasskeyName.ValidationError.Empty.message shouldBe "Passkey name cannot be empty"
+  "PasskeyName.apply" should "return a valid PasskeyName for valid input" in {
+    PasskeyName("My Key").value shouldBe "My Key"
   }
 
-  "ValidationError.TooLong.message" should "include the max length" in {
-    PasskeyName.ValidationError.TooLong(255).message shouldBe "Passkey name must not exceed 255 characters"
+  it should "throw IllegalArgumentException for empty input" in {
+    an[IllegalArgumentException] should be thrownBy PasskeyName("")
   }
 
-  "ValidationError.InvalidCharacters.message" should "describe the invalid characters error" in {
-    PasskeyName.ValidationError.InvalidCharacters.message shouldBe "Passkey name contains invalid characters"
+  it should "throw IllegalArgumentException for input with invalid characters" in {
+    an[IllegalArgumentException] should be thrownBy PasskeyName("bad<name>")
   }
 }
 

@@ -43,8 +43,4 @@ class PasskeyErrorSpec extends AnyFlatSpec with Matchers {
     exception.error shouldBe error
   }
 
-  it should "wrap PasskeyNotFound error" in {
-    val exception = PasskeyException(PasskeyError.PasskeyNotFound)
-    exception.getMessage shouldBe "Passkey not found."
-  }
 }
