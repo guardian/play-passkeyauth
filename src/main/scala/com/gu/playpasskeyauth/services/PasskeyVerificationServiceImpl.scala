@@ -1,7 +1,7 @@
 package com.gu.playpasskeyauth.services
 
 import com.gu.playpasskeyauth.models.*
-import com.webauthn4j.credential.{CredentialRecord, CredentialRecordImpl}
+import com.webauthn4j.credential.CredentialRecordImpl
 import com.webauthn4j.data.*
 import com.webauthn4j.data.client.challenge.{Challenge, DefaultChallenge}
 import com.webauthn4j.server.ServerProperty
@@ -50,7 +50,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
       userId: UserId,
       passkeyName: String,
       creationResponse: JsValue
-  ): Future[CredentialRecord] =
+  ): Future[Unit] =
     for {
       // Validate and sanitise the passkey name
       validatedName <- PasskeyName.validate(passkeyName) match {
@@ -89,7 +89,7 @@ private[playpasskeyauth] class PasskeyVerificationServiceImpl(
       newPasskey = Passkey.fromRegistration(passkeyId, validatedName, credentialRecord, clock)
       _ <- passkeyRepo.upsert(userId, newPasskey)
       _ <- challengeRepo.deleteRegistrationChallenge(userId)
-    } yield credentialRecord
+    } yield ()
 
   override def buildAuthenticationOptions(userId: UserId): Future[PublicKeyCredentialRequestOptions] =
     for {

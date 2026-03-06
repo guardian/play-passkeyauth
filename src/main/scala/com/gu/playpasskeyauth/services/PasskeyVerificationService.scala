@@ -1,7 +1,6 @@
 package com.gu.playpasskeyauth.services
 
 import com.gu.playpasskeyauth.models.{Passkey, PasskeyId, UserId}
-import com.webauthn4j.credential.CredentialRecord
 import com.webauthn4j.data.{AuthenticationData, PublicKeyCredentialCreationOptions, PublicKeyCredentialRequestOptions}
 import play.api.libs.json.JsValue
 
@@ -41,9 +40,9 @@ trait PasskeyVerificationService {
     *   The JSON response from `navigator.credentials.create()` in the browser.
     *
     * @return
-    *   A Future containing the registered [[com.webauthn4j.credential.CredentialRecord]]
+    *   A Future that completes when the passkey is registered
     */
-  def registerPasskey(userId: UserId, passkeyName: String, creationResponse: JsValue): Future[CredentialRecord]
+  def registerPasskey(userId: UserId, passkeyName: String, creationResponse: JsValue): Future[Unit]
 
   /** Lists all passkeys registered for the user.
     *

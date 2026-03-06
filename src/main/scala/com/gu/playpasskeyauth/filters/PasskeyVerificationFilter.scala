@@ -21,10 +21,13 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param verifier
   *   The service that performs passkey verification
   *
+  * @param action
+  *   The action name used in log messages (defaults to "verify")
+  *
   * @see
   *   [[https://webauthn4j.github.io/webauthn4j/en/#webauthn-assertion-verification-and-post-processing]]
   */
-class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationService)(using
+class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationService, action: String = "verify")(using
     val executionContext: ExecutionContext
 ) extends ActionFilter[[A] =>> RequestWithAuthenticationData[U, A]]
     with Logging {
@@ -34,15 +37,15 @@ class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationSer
     verifier
       .verifyPasskey(userId, request.authenticationData)
       .map { _ =>
-        logger.info(s"verify: ${userId.value}: Verified passkey")
+        logger.info(s"$action: ${userId.value}: Verified passkey")
         None
       }
       .recover {
         case e: PasskeyException =>
-          logger.warn(s"verify: ${userId.value}: Domain error: ${e.getMessage}")
+          logger.warn(s"$action: ${userId.value}: Domain error: ${e.getMessage}")
           Some(BadRequest("Something went wrong"))
         case e =>
-          logger.error(s"verify: ${userId.value}: Failure: ${e.getMessage}", e)
+          logger.error(s"$action: ${userId.value}: Failure: ${e.getMessage}", e)
           Some(InternalServerError("Something went wrong"))
       }
   }

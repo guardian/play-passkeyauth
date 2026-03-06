@@ -4,17 +4,10 @@ import com.gu.playpasskeyauth.PasskeyAuthContext
 import com.gu.playpasskeyauth.models.JsonEncodings.given
 import com.gu.playpasskeyauth.models.{PasskeyId, PasskeyUser}
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
-import com.gu.playpasskeyauth.web.{
-  AuthenticationDataAction,
-  CreationDataAction,
-  RequestWithAuthenticationData,
-  RequestWithCreationData,
-  RequestWithUser,
-  UserAction
-}
+import com.gu.playpasskeyauth.web.{CreationDataAction, UserAction}
 import play.api.Logging
-import play.api.libs.json.{Json, Writes}
-import play.api.mvc._
+import play.api.libs.json.Writes
+import play.api.mvc.*
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -55,8 +48,6 @@ class PasskeyController[U: PasskeyUser, B](
   private val userAction = ctx.actionBuilder.andThen(new UserAction[U](ctx.userExtractor))
   private val creationDataAction = new CreationDataAction[U](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
   private val userAndCreationDataAction = userAction.andThen(creationDataAction)
-  private val authDataAction = new AuthenticationDataAction[U](ctx.authenticationDataExtractor)
-  private val userAndAuthDataAction = userAction.andThen(authDataAction)
 
   /** Generates the options required to create a new passkey credential.
     *
@@ -122,29 +113,6 @@ class PasskeyController[U: PasskeyUser, B](
       "authenticationOptions",
       request.user,
       passkeyService.buildAuthenticationOptions(request.user.id)
-    )
-  }
-
-  /** Verifies a passkey authentication assertion submitted by the browser.
-    *
-    * This endpoint receives the credential assertion created by `navigator.credentials.get()` in the browser. The
-    * request must contain the assertion data from the WebAuthn API.
-    *
-    * On success, returns a 200 JSON response. On failure, returns a 400 or 500 error response.
-    *
-    * @see
-    *   [[https://webauthn4j.github.io/webauthn4j/en/#verifying-the-webauthn-assertion]]
-    *
-    * @return
-    *   A Play action that returns JSON on success, or an error response
-    */
-  def authenticate: Action[B] = userAndAuthDataAction.async { request =>
-    apiResponse(
-      "authenticate",
-      request.user,
-      passkeyService
-        .verifyPasskey(request.user.id, request.authenticationData)
-        .map(_ => Json.obj("status" -> "ok"))
     )
   }
 

@@ -194,7 +194,7 @@ async function authenticate() {
         const assertionData = transformAssertion(assertion);
 
         // Step 5: Send assertion to server
-        const authResponse = await fetch('/auth', {
+        const authResponse = await fetch('/verify', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
