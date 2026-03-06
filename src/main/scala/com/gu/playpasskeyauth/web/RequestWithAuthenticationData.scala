@@ -33,6 +33,20 @@ case class RequestWithAuthenticationData[U, A](
     request: Request[A]
 ) extends WrappedRequest[A](request)
 
+/** Extracts passkey authentication data from a [[RequestWithUser]].
+  *
+  * ==Type-safety note==
+  * `ActionRefiner` requires a polymorphic `refine[A]`, but the extractor needs a concrete `Request[B]`. We bridge this
+  * with a single `asInstanceOf[RequestWithUser[U, B]]` cast. This is safe because:
+  *   1. On the JVM, `RequestWithUser[U, A]` and `RequestWithUser[U, B]` erase to the same type — the cast never fails
+  *      at runtime regardless of what `A` is.
+  *   2. `AuthenticationDataAction[U, B]` is `private[playpasskeyauth]` — it is only ever constructed inside
+  *      [[com.gu.playpasskeyauth.PasskeyAuth]], which holds the same `B` in scope.
+  *   3. It is only ever composed via `andThen` onto an `ActionBuilder[Request, B]`, so the Play framework guarantees
+  *      the actual runtime body is of type `B` for every call to `refine`.
+  *   4. The cast is used only to satisfy the extractor's `Request[B]` parameter; all further work (building the result)
+  *      uses the original uncast `request`.
+  */
 private[playpasskeyauth] class AuthenticationDataAction[U, B](
     findAuthenticationData: Request[B] => Option[JsValue]
 )(using val executionContext: ExecutionContext)
@@ -41,6 +55,7 @@ private[playpasskeyauth] class AuthenticationDataAction[U, B](
   protected def refine[A](
       request: RequestWithUser[U, A]
   ): Future[Either[Result, RequestWithAuthenticationData[U, A]]] = {
+    // Safe: see class scaladoc. The cast is purely a type-level bridge; the object is unchanged.
     val typedRequest = request.asInstanceOf[RequestWithUser[U, B]]
     findAuthenticationData(typedRequest) match {
       case Some(jsValue) =>
