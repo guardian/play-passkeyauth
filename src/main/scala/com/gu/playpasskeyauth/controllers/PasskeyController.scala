@@ -46,7 +46,7 @@ class PasskeyController[U: PasskeyUser, B](
     with Logging {
 
   private val userAction = ctx.actionBuilder.andThen(new UserAction[U](ctx.userExtractor))
-  private val creationDataAction = new CreationDataAction[U](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
+  private val creationDataAction = new CreationDataAction[U, B](ctx.creationDataExtractor, ctx.passkeyNameExtractor)
   private val userAndCreationDataAction = userAction.andThen(creationDataAction)
 
   /** Generates the options required to create a new passkey credential.

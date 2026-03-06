@@ -49,7 +49,7 @@ import scala.concurrent.ExecutionContext
   * @example
   *   {{{
   * // In your module or application loader:
-  * val ctx = PasskeyAuthContext(
+  * val ctx = PasskeyAuthContext[MyUser, AnyContent](
   *   actionBuilder               = defaultActionBuilder,   // or your existing auth action
   *   userExtractor               = req => sessionUser(req),
   *   creationDataExtractor       = req => req.body.asJson.flatMap(j => (j \ "credential").asOpt[JsValue]),
@@ -107,7 +107,7 @@ class PasskeyAuth[U: PasskeyUser, B](
     */
   def verificationAction(): ActionBuilder[[A] =>> RequestWithAuthenticationData[U, A], B] = {
     val userAction = ctx.actionBuilder.andThen(new UserAction[U](ctx.userExtractor))
-    val authDataAction = new AuthenticationDataAction[U](ctx.authenticationDataExtractor)
+    val authDataAction = new AuthenticationDataAction[U, B](ctx.authenticationDataExtractor)
     val verificationFilter = new PasskeyVerificationFilter[U](verificationService)
     userAction.andThen(authDataAction).andThen(verificationFilter)
   }

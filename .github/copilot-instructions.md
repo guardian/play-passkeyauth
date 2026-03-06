@@ -37,12 +37,13 @@ com.gu.playpasskeyauth.web.*                    Play action refiners and wrapped
 | Type | Kind | Role |
 |---|---|---|
 | `PasskeyAuth[U, B]` | `class` | Top-level wiring; call `.controller()` and `.verificationAction()` |
-| `PasskeyAuthContext[U, B]` | `case class` | Consumer-supplied config: action builder, extractors |
-| `PasskeyUser[U]` | `trait` (typeclass) | Bridge between consumer's user type and library; requires `id: UserId` and `displayName: String` extension methods |
+| `PasskeyAuthContext[U, B]` | `case class` | Consumer-supplied config: action builder, extractors (all extractors take `Request[B]`) |
+| `PasskeyUser[U]` | `trait` (typeclass) | Bridge between consumer's user type and library; companion has `apply` summoner; requires `id: UserId` and `displayName: String` extension methods |
 | `PasskeyVerificationService` | `trait` | Public service API; all methods return `Future[A]` |
 | `PasskeyVerificationServiceImpl` | `class` | Private-to-package implementation; not part of public API |
 | `PasskeyRepository` | `trait` | Consumer-implemented; 4 methods: `get`, `list`, `upsert`, `delete` |
-| `PasskeyChallengeRepository` | `trait` | Consumer-implemented; 6 methods for registration/auth challenges |
+| `PasskeyChallengeRepository` | `trait` | Consumer-implemented; 3 methods (`load`, `insert`, `delete`) with `ChallengeType` discriminator |
+| `ChallengeType` | `enum` | `Registration` or `Authentication`; used by `PasskeyChallengeRepository` |
 | `PasskeyError` | `enum` | Domain error cases: `InvalidName`, `DuplicateName`, `PasskeyNotFound`, `ChallengeExpired` |
 | `PasskeyException` | `final case class extends Exception` | Wraps `PasskeyError`; used to signal expected domain failures in `Future` |
 | `Passkey` | `case class` | Stored credential: `id`, `name`, `credentialRecord`, `createdAt`, `lastUsedAt`, `signCount`, `aaguid` |
@@ -50,8 +51,8 @@ com.gu.playpasskeyauth.web.*                    Play action refiners and wrapped
 | `PasskeyName` | `case class` (private ctor) | Validated name; construct via `PasskeyName.validate` or `PasskeyName.apply` |
 | `UserId` | `case class` | Type-safe user ID string; rejects blank or padded values |
 | `HostApp` | `case class` | Relying party: `name`, `uri`; derives `host` and `origin`; enforces https (localhost may use http) |
-| `WebAuthnConfig` | `case class` | Pure WebAuthn options; default via `WebAuthnConfig.default` |
-| `JsonEncodings` | `object` | `given Writes[…]` instances + Jackson↔Play JSON bridge |
+| `WebAuthnConfig` | `case class` | Pure WebAuthn options; default via `WebAuthnConfig.default`; customise via `withTimeout`, `withAttestation`, `withoutUserVerification`, `withTransports` |
+| `JsonEncodings` | `object` | `given Writes[…]` and `given Reads[…]` instances + Jackson↔Play JSON bridge |
 | `RequestWithUser[U,A]` | `case class extends WrappedRequest` | After `UserAction` refiner |
 | `RequestWithCreationData[U,A]` | `case class extends WrappedRequest` | After `CreationDataAction` refiner |
 | `RequestWithAuthenticationData[U,A]` | `case class extends WrappedRequest` | After `AuthenticationDataAction` refiner |
@@ -122,7 +123,7 @@ sbt "project example" run  # run the example Play application
 ```scala
 for {
   existing <- passkeyRepo.list(userId)
-  challenge <- challengeRepo.loadRegistrationChallenge(userId)
+  challenge <- challengeRepo.load(userId, ChallengeType.Registration)
   result <- Future.fromTry(Try(expensiveJavaCall()))
   _ <- passkeyRepo.upsert(userId, buildPasskey(result))
 } yield result
@@ -153,6 +154,8 @@ given PasskeyUser[MyUser] with {
 ### Wiring `PasskeyAuth` (consumer code)
 
 ```scala
+import models.MyUser.given  // brings PasskeyUser[MyUser] into scope
+
 val ctx = PasskeyAuthContext[MyUser, AnyContent](
   actionBuilder               = defaultActionBuilder,
   userExtractor               = req => req.attrs(UserKey),

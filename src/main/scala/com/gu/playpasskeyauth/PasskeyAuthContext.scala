@@ -1,7 +1,6 @@
 package com.gu.playpasskeyauth
 
 import com.gu.playpasskeyauth.models.WebAuthnConfig
-import com.gu.playpasskeyauth.web.*
 import play.api.libs.json.JsValue
 import play.api.mvc.{ActionBuilder, Request}
 
@@ -25,16 +24,13 @@ import play.api.mvc.{ActionBuilder, Request}
   *   user in a session or a prior action result: `request => request.attrs(UserKey)`
   *
   * @param creationDataExtractor
-  *   Extracts the WebAuthn creation response JSON (from `navigator.credentials.create()`) from a [[RequestWithUser]].
-  *   Typically reads a field from the JSON request body.
+  *   Extracts the WebAuthn creation response JSON (from `navigator.credentials.create()`) from the request body.
   *
   * @param authenticationDataExtractor
-  *   Extracts the WebAuthn assertion JSON (from `navigator.credentials.get()`) from a [[RequestWithUser]]. Typically
-  *   reads a field from the JSON request body.
+  *   Extracts the WebAuthn assertion JSON (from `navigator.credentials.get()`) from the request body.
   *
   * @param passkeyNameExtractor
-  *   Extracts the user-provided passkey name from a [[RequestWithUser]]. Typically reads a field from the JSON request
-  *   body.
+  *   Extracts the user-provided passkey name from the request body.
   *
   * @param webAuthnConfig
   *   Configuration for WebAuthn operations (algorithms, timeouts, authenticator selection, etc.). Defaults to
@@ -42,7 +38,7 @@ import play.api.mvc.{ActionBuilder, Request}
   *
   * @example
   *   {{{
-  * val ctx = PasskeyAuthContext(
+  * val ctx = PasskeyAuthContext[User, AnyContent](
   *   actionBuilder               = defaultActionBuilder,
   *   userExtractor               = _ => User.demo,               // or: req => req.attrs(UserKey)
   *   creationDataExtractor       = req => req.body.asJson.flatMap(j => (j \ "credential").asOpt[JsValue]),
@@ -54,8 +50,8 @@ import play.api.mvc.{ActionBuilder, Request}
 case class PasskeyAuthContext[U, B](
     actionBuilder: ActionBuilder[Request, B],
     userExtractor: Request[?] => U,
-    creationDataExtractor: RequestWithUser[U, ?] => Option[JsValue],
-    authenticationDataExtractor: RequestWithUser[U, ?] => Option[JsValue],
-    passkeyNameExtractor: RequestWithUser[U, ?] => Option[String],
+    creationDataExtractor: Request[B] => Option[JsValue],
+    authenticationDataExtractor: Request[B] => Option[JsValue],
+    passkeyNameExtractor: Request[B] => Option[String],
     webAuthnConfig: WebAuthnConfig = WebAuthnConfig.default
 )

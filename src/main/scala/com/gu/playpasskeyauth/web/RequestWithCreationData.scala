@@ -1,5 +1,6 @@
 package com.gu.playpasskeyauth.web
 
+import com.gu.playpasskeyauth.models.PasskeyName
 import play.api.libs.json.JsValue
 import play.api.mvc.*
 import play.api.mvc.Results.BadRequest
@@ -18,8 +19,8 @@ import scala.concurrent.{ExecutionContext, Future}
   *   The body content type (e.g., `AnyContent`, `JsValue`)
   *
   * @param passkeyName
-  *   A human-readable name for this passkey credential, typically provided by the user. Examples: "Mac Chrome", "Apple
-  *   keychain", "Yubikey"
+  *   The validated passkey name for this credential, provided by the user. Examples: "Mac Chrome", "Apple keychain",
+  *   "Yubikey"
   *
   * @param creationData
   *   The JSON response from `navigator.credentials.create()` in the browser. This contains the public key credential
@@ -32,22 +33,31 @@ import scala.concurrent.{ExecutionContext, Future}
   *   The original Play request being wrapped
   */
 case class RequestWithCreationData[U, A](
-    passkeyName: String,
+    passkeyName: PasskeyName,
     creationData: JsValue,
     user: U,
     request: Request[A]
 ) extends WrappedRequest[A](request)
 
-private[playpasskeyauth] class CreationDataAction[U](
-    findCreationData: RequestWithUser[U, ?] => Option[JsValue],
-    findPasskeyName: RequestWithUser[U, ?] => Option[String]
+private[playpasskeyauth] class CreationDataAction[U, B](
+    findCreationData: Request[B] => Option[JsValue],
+    findPasskeyName: Request[B] => Option[String]
 )(using val executionContext: ExecutionContext)
     extends ActionRefiner[[A] =>> RequestWithUser[U, A], [A] =>> RequestWithCreationData[U, A]] {
 
-  protected def refine[A](request: RequestWithUser[U, A]): Future[Either[Result, RequestWithCreationData[U, A]]] =
-    (findPasskeyName(request), findCreationData(request)) match {
-      case (Some(name), Some(jsValue)) =>
-        Future.successful(Right(RequestWithCreationData(name, jsValue, request.user, request)))
+  protected def refine[A](request: RequestWithUser[U, A]): Future[Either[Result, RequestWithCreationData[U, A]]] = {
+    // The underlying request has body type B, but the type parameter A is erased here.
+    // We cast safely because the action pipeline guarantees the body type matches.
+    val typedRequest = request.asInstanceOf[RequestWithUser[U, B]]
+    (findPasskeyName(typedRequest), findCreationData(typedRequest)) match {
+      case (Some(rawName), Some(jsValue)) =>
+        PasskeyName.validate(rawName) match {
+          case Right(name) =>
+            Future.successful(Right(RequestWithCreationData(name, jsValue, request.user, request)))
+          case Left(error) =>
+            Future.successful(Left(BadRequest(s"Invalid passkey name: ${error.message}")))
+        }
       case _ => Future.successful(Left(BadRequest("Expected creation data")))
     }
+  }
 }

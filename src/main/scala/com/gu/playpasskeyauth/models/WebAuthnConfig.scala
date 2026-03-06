@@ -75,7 +75,41 @@ case class WebAuthnConfig(
     userVerification: UserVerificationRequirement,
     credentialType: PublicKeyCredentialType,
     transports: Option[Set[AuthenticatorTransport]]
-)
+) {
+
+  /** Returns a copy with a different browser timeout for credential operations.
+    *
+    * @param timeout
+    *   The new timeout duration, e.g. `Duration(120, SECONDS)`
+    */
+  def withTimeout(timeout: Duration): WebAuthnConfig = copy(timeout = timeout)
+
+  /** Returns a copy with a different attestation conveyance preference.
+    *
+    * @param attestation
+    *   The new preference, e.g. `AttestationConveyancePreference.NONE`
+    */
+  def withAttestation(attestation: AttestationConveyancePreference): WebAuthnConfig =
+    copy(attestation = attestation)
+
+  /** Returns a copy with user verification disabled (both client and server side).
+    *
+    * Useful for low-risk flows where biometric/PIN prompts are unnecessary.
+    */
+  def withoutUserVerification: WebAuthnConfig =
+    copy(
+      userVerificationRequired = false,
+      userVerification = UserVerificationRequirement.DISCOURAGED
+    )
+
+  /** Returns a copy that restricts allowed authenticator transports.
+    *
+    * @param transports
+    *   The set of allowed transports, e.g. `Set(AuthenticatorTransport.INTERNAL)`
+    */
+  def withTransports(transports: Set[AuthenticatorTransport]): WebAuthnConfig =
+    copy(transports = Some(transports))
+}
 
 object WebAuthnConfig {
 

@@ -12,26 +12,45 @@ import scala.concurrent.Future
   * authentication options call and the actual operation. Implementations should respect the `expiresAt` timestamp and
   * reject or clean up expired challenges.
   *
+  * There should always be 0..1 challenges of each [[ChallengeType]] per user.
+  *
   * @note
   *   Implementations are responsible for:
   *   - Storing challenges with their expiration timestamps
   *   - Rejecting expired challenges when loading (returning a failed Future)
   *   - Optionally cleaning up expired challenges periodically
+  *
+  * @example
+  *   {{{
+  * class MyRedisRepo extends PasskeyChallengeRepository {
+  *   def load(userId: UserId, challengeType: ChallengeType): Future[Challenge] =
+  *     redis.get(key(userId, challengeType)).map(deserialise)
+  *
+  *   def insert(userId: UserId, challenge: Challenge, expiresAt: Instant, challengeType: ChallengeType): Future[Unit] =
+  *     redis.setex(key(userId, challengeType), ttl(expiresAt), serialise(challenge))
+  *
+  *   def delete(userId: UserId, challengeType: ChallengeType): Future[Unit] =
+  *     redis.del(key(userId, challengeType))
+  *
+  *   private def key(userId: UserId, ct: ChallengeType) = s"challenge:${ct}:${userId.value}"
+  * }
+  *   }}}
   */
 trait PasskeyChallengeRepository {
 
-  /** Loads the current registration challenge so that it can be compared with the one offered at registration. There
-    * should always be 0..1 registration challenges per user. This method should only be called when a registration
-    * challenge is expected to be stored.
+  /** Loads the current challenge so that it can be compared with the one offered at registration or authentication.
+    * This method should only be called when a challenge is expected to be stored.
     *
     * @param userId
     *   ID of user corresponding to challenge
+    * @param challengeType
+    *   Whether this is a registration or authentication challenge
     * @return
-    *   The registration challenge. Should fail if no valid (non-expired) challenge exists.
+    *   The challenge. Should fail if no valid (non-expired) challenge exists.
     */
-  def loadRegistrationChallenge(userId: UserId): Future[Challenge]
+  def load(userId: UserId, challengeType: ChallengeType): Future[Challenge]
 
-  /** Inserts a registration challenge for the given user.
+  /** Inserts a challenge for the given user, replacing any existing challenge of the same type.
     *
     * @param userId
     *   ID of user corresponding to challenge
@@ -39,52 +58,22 @@ trait PasskeyChallengeRepository {
     *   Challenge to store
     * @param expiresAt
     *   When this challenge expires and should no longer be accepted
+    * @param challengeType
+    *   Whether this is a registration or authentication challenge
     * @return
     *   Indication of success
     */
-  def insertRegistrationChallenge(userId: UserId, challenge: Challenge, expiresAt: Instant): Future[Unit]
+  def insert(userId: UserId, challenge: Challenge, expiresAt: Instant, challengeType: ChallengeType): Future[Unit]
 
-  /** Deletes the user's registration challenge. When this is called it's expected that there will be precisely one
-    * registration challenge to delete.
+  /** Deletes the user's challenge. When this is called it's expected that there will be precisely one challenge of the
+    * given type to delete.
     *
     * @param userId
     *   ID of user corresponding to challenge
+    * @param challengeType
+    *   Whether this is a registration or authentication challenge
     * @return
     *   Indication of success
     */
-  def deleteRegistrationChallenge(userId: UserId): Future[Unit]
-
-  /** Loads the current authentication challenge so that it can be compared with the one offered for authentication.
-    * There should always be 0..1 authentication challenges per user. This method should only be called when an
-    * authentication challenge is expected to be stored.
-    *
-    * @param userId
-    *   ID of user corresponding to challenge
-    * @return
-    *   The authentication challenge. Should fail if no valid (non-expired) challenge exists.
-    */
-  def loadAuthenticationChallenge(userId: UserId): Future[Challenge]
-
-  /** Inserts an authentication challenge for the given user.
-    *
-    * @param userId
-    *   ID of user corresponding to challenge
-    * @param challenge
-    *   Challenge to store
-    * @param expiresAt
-    *   When this challenge expires and should no longer be accepted
-    * @return
-    *   Indication of success
-    */
-  def insertAuthenticationChallenge(userId: UserId, challenge: Challenge, expiresAt: Instant): Future[Unit]
-
-  /** Deletes the user's authentication challenge. When this is called it's expected that there will be precisely one
-    * authentication challenge to delete.
-    *
-    * @param userId
-    *   ID of user corresponding to challenge
-    * @return
-    *   Indication of success
-    */
-  def deleteAuthenticationChallenge(userId: UserId): Future[Unit]
+  def delete(userId: UserId, challengeType: ChallengeType): Future[Unit]
 }

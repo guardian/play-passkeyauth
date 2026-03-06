@@ -1,13 +1,14 @@
 package modules
 
 import com.google.inject.{AbstractModule, Provides}
-import com.gu.playpasskeyauth.models.{HostApp, PasskeyUser, WebAuthnConfig}
+import com.gu.playpasskeyauth.models.HostApp
 import com.gu.playpasskeyauth.services.{PasskeyChallengeRepository, PasskeyRepository}
 import com.gu.playpasskeyauth.{PasskeyAuth, PasskeyAuthContext}
 import models.User
+import models.User.given
 import play.api.Configuration
 import play.api.libs.json.JsValue
-import play.api.mvc.{AnyContent, DefaultActionBuilder, Request}
+import play.api.mvc.{AnyContent, DefaultActionBuilder}
 import services.{InMemoryChallengeRepository, InMemoryPasskeyRepository}
 
 import javax.inject.Singleton
@@ -36,27 +37,12 @@ class PasskeyModule extends AbstractModule {
     val appOrigin = config.get[String]("passkey.app.origin")
     val hostApp = HostApp(appName, new java.net.URI(appOrigin))
 
-    // Ensure the PasskeyUser typeclass is in implicit scope for the PasskeyAuth constructor
-    given PasskeyUser[User] = User.given_PasskeyUser_User
-
     val ctx = PasskeyAuthContext[User, AnyContent](
       actionBuilder = DefaultActionBuilder(cc.parsers.default),
       userExtractor = _ => User.demo,
-      creationDataExtractor = req =>
-        req.body match {
-          case body: AnyContent => body.asJson.flatMap(j => (j \ "credential").asOpt[JsValue])
-          case _                => None
-        },
-      authenticationDataExtractor = req =>
-        req.body match {
-          case body: AnyContent => body.asJson.flatMap(j => (j \ "assertion").asOpt[JsValue])
-          case _                => None
-        },
-      passkeyNameExtractor = req =>
-        req.body match {
-          case body: AnyContent => body.asJson.flatMap(j => (j \ "name").asOpt[String])
-          case _                => None
-        }
+      creationDataExtractor = req => req.body.asJson.flatMap(j => (j \ "credential").asOpt[JsValue]),
+      authenticationDataExtractor = req => req.body.asJson.flatMap(j => (j \ "assertion").asOpt[JsValue]),
+      passkeyNameExtractor = req => req.body.asJson.flatMap(j => (j \ "name").asOpt[String])
     )
 
     new PasskeyAuth(cc, hostApp, ctx, passkeyRepo, challengeRepo, play.api.mvc.Call("GET", "/"))

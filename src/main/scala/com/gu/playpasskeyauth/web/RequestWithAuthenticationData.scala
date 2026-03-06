@@ -33,15 +33,19 @@ case class RequestWithAuthenticationData[U, A](
     request: Request[A]
 ) extends WrappedRequest[A](request)
 
-private[playpasskeyauth] class AuthenticationDataAction[U](
-    findAuthenticationData: RequestWithUser[U, ?] => Option[JsValue]
+private[playpasskeyauth] class AuthenticationDataAction[U, B](
+    findAuthenticationData: Request[B] => Option[JsValue]
 )(using val executionContext: ExecutionContext)
     extends ActionRefiner[[A] =>> RequestWithUser[U, A], [A] =>> RequestWithAuthenticationData[U, A]] {
 
-  protected def refine[A](request: RequestWithUser[U, A]): Future[Either[Result, RequestWithAuthenticationData[U, A]]] =
-    findAuthenticationData(request) match {
+  protected def refine[A](
+      request: RequestWithUser[U, A]
+  ): Future[Either[Result, RequestWithAuthenticationData[U, A]]] = {
+    val typedRequest = request.asInstanceOf[RequestWithUser[U, B]]
+    findAuthenticationData(typedRequest) match {
       case Some(jsValue) =>
         Future.successful(Right(RequestWithAuthenticationData(jsValue, request.user, request)))
       case None => Future.successful(Left(BadRequest("Expected authentication data")))
     }
+  }
 }

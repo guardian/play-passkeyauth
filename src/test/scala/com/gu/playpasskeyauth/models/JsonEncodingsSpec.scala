@@ -2,7 +2,7 @@ package com.gu.playpasskeyauth.models
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import play.api.libs.json.Json
+import play.api.libs.json.{JsError, JsString, JsSuccess, Json}
 
 import java.time.Instant
 
@@ -46,5 +46,40 @@ class JsonEncodingsSpec extends AnyFlatSpec with Matchers {
   "Writes[PasskeyName]" should "serialise as string value" in {
     val json = Json.toJson(sampleName)
     json.as[String] shouldBe sampleName.value
+  }
+
+  "Reads[PasskeyId]" should "deserialise from base64url string" in {
+    val json = JsString(sampleId.toBase64Url)
+    json.validate[PasskeyId] shouldBe JsSuccess(sampleId)
+  }
+
+  it should "round-trip through Writes and Reads" in {
+    val written = Json.toJson(sampleId)
+    written.validate[PasskeyId] shouldBe JsSuccess(sampleId)
+  }
+
+  "Reads[PasskeyName]" should "deserialise from valid string" in {
+    val json = JsString("My YubiKey")
+    json.validate[PasskeyName] shouldBe JsSuccess(PasskeyName("My YubiKey"))
+  }
+
+  it should "reject empty string" in {
+    val json = JsString("")
+    json.validate[PasskeyName] shouldBe a[JsError]
+  }
+
+  it should "reject string with invalid characters" in {
+    val json = JsString("<script>alert(1)</script>")
+    json.validate[PasskeyName] shouldBe a[JsError]
+  }
+
+  it should "round-trip through Writes and Reads" in {
+    val written = Json.toJson(sampleName)
+    written.validate[PasskeyName] shouldBe JsSuccess(sampleName)
+  }
+
+  "Reads[UserId]" should "deserialise from valid string" in {
+    val json = JsString("user-123")
+    json.validate[UserId] shouldBe JsSuccess(UserId("user-123"))
   }
 }

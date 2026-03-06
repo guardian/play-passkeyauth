@@ -28,3 +28,17 @@ trait PasskeyUser[U] {
     def displayName: String
   }
 }
+
+object PasskeyUser {
+
+  /** Summoner method — returns the [[PasskeyUser]] instance for `U` that is already in implicit scope.
+    *
+    * Useful for passing the instance explicitly where needed. For Guice `@Provides` methods, prefer importing the given
+    * instances from your user type's companion:
+    *
+    * {{{
+    * import models.User.given   // brings PasskeyUser[User] into scope
+    * }}}
+    */
+  def apply[U](using instance: PasskeyUser[U]): PasskeyUser[U] = instance
+}
