@@ -1,6 +1,6 @@
 package com.gu.playpasskeyauth.filters
 
-import com.gu.playpasskeyauth.models.User
+import com.gu.playpasskeyauth.models.PasskeyUser
 import com.gu.playpasskeyauth.services.{PasskeyException, PasskeyVerificationService}
 import com.gu.playpasskeyauth.web.RequestWithAuthenticationData
 import play.api.Logging
@@ -24,7 +24,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * @see
   *   [[https://webauthn4j.github.io/webauthn4j/en/#webauthn-assertion-verification-and-post-processing]]
   */
-class PasskeyVerificationFilter[U: User](verifier: PasskeyVerificationService)(using
+class PasskeyVerificationFilter[U: PasskeyUser](verifier: PasskeyVerificationService)(using
     val executionContext: ExecutionContext
 ) extends ActionFilter[[A] =>> RequestWithAuthenticationData[U, A]]
     with Logging {

@@ -1,6 +1,6 @@
 package models
 
-import com.gu.playpasskeyauth.models.{User as PasskeyUser, UserId}
+import com.gu.playpasskeyauth.models.{PasskeyUser, UserId}
 
 /** Simple user model for the example application.
   *

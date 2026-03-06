@@ -12,13 +12,13 @@ package com.gu.playpasskeyauth.models
   *   {{{
   * case class MyUser(email: String, name: String)
   *
-  * given User[MyUser] with
+  * given PasskeyUser[MyUser] with
   *   extension (u: MyUser)
   *     def id: UserId = UserId(u.email)
   *     def displayName: String = u.name
   *   }}}
   */
-trait User[U] {
+trait PasskeyUser[U] {
   extension (u: U) {
 
     /** The unique identifier for this user, used in all passkey storage and lookup operations. */
