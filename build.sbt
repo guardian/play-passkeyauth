@@ -15,18 +15,18 @@ val playVersion = "3.0.10"
 /*
  * To test whether any of these entries are redundant:
  * 1. Comment it out
- * 2. Run `sbt Runtime/dependencyList`
+ * 2. Run `sbt dependencyList`
  * 3. If no earlier version appears in the dependency list, the entry can be removed.
  */
 val safeTransitiveDependencies = {
   val jacksonVersion = "2.21.1"
   Seq(
-    "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion % Runtime,
-    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonVersion % Runtime,
-    "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonVersion % Runtime,
-    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion % Runtime,
-    "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion % Runtime,
-    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion % Runtime
+    "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
+    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % jacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVersion,
+    "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % jacksonVersion,
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
   )
 }
 
