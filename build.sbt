@@ -19,7 +19,7 @@ val playVersion = "3.0.10"
  * 3. If no earlier version appears in the dependency list, the entry can be removed.
  */
 val safeTransitiveDependencies = {
-  val jacksonVersion = "2.21.2"
+  val jacksonVersion = "2.21.3"
   Seq(
     "com.fasterxml.jackson.core" % "jackson-core" % jacksonVersion,
     "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % jacksonVersion,
@@ -38,7 +38,7 @@ lazy val root = project
     name := "play-passkeyauth",
     libraryDependencies ++= Seq(
       "org.playframework" %% "play" % playVersion,
-      "com.webauthn4j" % "webauthn4j-core" % "0.31.3.RELEASE",
+      "com.webauthn4j" % "webauthn4j-core" % "0.31.5.RELEASE",
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
       "org.scalatestplus" %% "scalacheck-1-18" % "3.2.19.0" % Test
