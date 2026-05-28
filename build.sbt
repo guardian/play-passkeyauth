@@ -10,7 +10,7 @@ ThisBuild / scalacOptions ++= Seq(
 )
 ThisBuild / scalafmtOnCompile := true
 
-val playVersion = "3.0.10"
+val playVersion = "3.0.11"
 
 /*
  * To test whether any of these entries are redundant:
