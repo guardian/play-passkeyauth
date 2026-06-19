@@ -1,7 +1,7 @@
 import ReleaseTransformations.*
 import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
-ThisBuild / scalaVersion := "3.3.7"
+ThisBuild / scalaVersion := "3.3.8"
 ThisBuild / scalacOptions ++= Seq(
   "-explain",
   "-no-indent",
