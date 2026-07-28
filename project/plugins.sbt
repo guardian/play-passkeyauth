@@ -1,5 +1,5 @@
 addDependencyTreePlugin
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.6.1")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.6.2")
 
 // For release workflow
 addSbtPlugin("ch.epfl.scala" % "sbt-version-policy" % "3.3.0")
