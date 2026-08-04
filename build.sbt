@@ -41,7 +41,7 @@ lazy val root = project
       "com.webauthn4j" % "webauthn4j-core" % "0.31.8.RELEASE",
       "org.playframework" %% "play-test" % playVersion % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test,
-      "org.scalatestplus" %% "scalacheck-1-18" % "3.2.19.0" % Test
+      "org.scalatestplus" %% "scalacheck-1-19" % "3.2.20.0" % Test
     ) ++ safeTransitiveDependencies,
     releaseVersion := ReleaseVersion.fromAggregatedAssessedCompatibilityWithLatestRelease().value,
     releaseProcess := Seq[ReleaseStep](
