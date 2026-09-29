@@ -24,7 +24,7 @@ The example consists of:
 
 ### Prerequisites
 
-- Java 11 or later
+- Java 17 or later
 - sbt 1.x
 
 ### Steps

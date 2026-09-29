@@ -1,11 +1,11 @@
 import ReleaseTransformations.*
 import sbtversionpolicy.withsbtrelease.ReleaseVersion
 
-ThisBuild / scalaVersion := "3.3.8"
+ThisBuild / scalaVersion := "3.9.0"
 ThisBuild / scalacOptions ++= Seq(
   "-explain",
   "-no-indent",
-  "-release:11",
+  "-release:17",
   "-Werror"
 )
 ThisBuild / scalafmtOnCompile := true
