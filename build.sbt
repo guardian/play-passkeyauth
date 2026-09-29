@@ -5,7 +5,7 @@ ThisBuild / scalaVersion := "3.9.0"
 ThisBuild / scalacOptions ++= Seq(
   "-explain",
   "-no-indent",
-  "-release:11",
+  "-release:17",
   "-Werror"
 )
 ThisBuild / scalafmtOnCompile := true
